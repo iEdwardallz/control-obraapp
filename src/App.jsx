@@ -7,7 +7,7 @@ import {
   getAuth, 
   onAuthStateChanged, 
   signInAnonymously,
-  signInWithCustomToken // <--- AGREGADO: Importación faltante
+  signInWithCustomToken 
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -105,40 +105,55 @@ const Icons = {
   Unlock: () => <span>🔓</span>
 };
 
-// --- FIREBASE CONFIG ---
-// Usamos los globals que provee el entorno para conectar la DB
-const firebaseConfig = JSON.parse(__firebase_config);
+// --- FIREBASE CONFIG (ROBUSTA) ---
+// Intentamos cargar la config del entorno (Immersive). Si falla (Localhost), usamos la tuya original.
+let firebaseConfig;
+try {
+  // Intentamos obtener la variable global del entorno
+  if (typeof __firebase_config !== 'undefined') {
+    firebaseConfig = JSON.parse(__firebase_config);
+  } else {
+    throw new Error("No environment config");
+  }
+} catch (e) {
+  // FALLBACK: Configuración original de tu archivo txt
+  const savedKey = localStorage.getItem('custom_firebase_key');
+  firebaseConfig = { 
+    apiKey: savedKey || "AIzaSyDCcDPEHZO8K8XL9Ni2ZHTkwwb7jT8-BnQ", 
+    authDomain: "controlexcavacion.firebaseapp.com", 
+    projectId: "controlexcavacion", 
+    storageBucket: "controlexcavacion.firebasestorage.app", 
+    messagingSenderId: "780205412766", 
+    appId: "1:780205412766:web:91caa9e71ff213a40e868f" 
+  };
+}
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Intentar habilitar persistencia (bueno para móviles con mala señal)
+// Intentar habilitar persistencia
 try { 
-  enableIndexedDbPersistence(db).catch(err => {
-    if (err.code === 'failed-precondition') {
-        // Múltiples pestañas abiertas
-        console.log("Persistencia: Múltiples pestañas abiertas");
-    } else if (err.code === 'unimplemented') {
-        console.log("Persistencia no soportada por el navegador");
-    }
-  }); 
+  enableIndexedDbPersistence(db).catch(err => console.log("Persistencia no disponible:", err.code)); 
 } catch(e){}
 
-// Usamos el ID de la app del entorno o un default
+// Usamos ID del entorno o un default si estamos local
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'controlexcavacion-default';
-// Ruta base para los datos: artifacts/{appId}/public/data
-const collectionPath = `artifacts/${appId}/public/data`;
+
+// --- ATENCIÓN: RUTA DE COLECCIONES ---
+// Si estamos en entorno Immersive usamos artifacts, si estamos en local usamos tu ruta original para no perder datos.
+const isImmersive = typeof __app_id !== 'undefined';
+// Si prefieres usar SIEMPRE tu base de datos original, descomenta la linea de abajo:
+const collectionPath = isImmersive ? `artifacts/${appId}/public/data` : "registros/proyecto-master";
+// const collectionPath = "registros/proyecto-master"; // <--- Descomenta esto si quieres forzar tu DB original siempre
 
 // --- CONSTANTES ---
-// NOTA: Eliminamos la dependencia estricta de "EduardoAdmin" para permitir otros usuarios Master.
-// const MASTER_ADMIN = { username: "EduardoAdmin" }; 
 
 // --- UTILIDADES ---
 const getTodayString = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const getLongDateString = () => { const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }; return new Date().toLocaleDateString('es-MX', options); };
 const playBeep = () => { try { const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); audio.volume = 0.5; audio.play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate(200); } catch(e){} };
 
-// GPS optimizado para OFFLINE (Timeout estricto de 2s)
 const getGPS = () => {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
@@ -151,7 +166,6 @@ const getGPS = () => {
   });
 };
 
-// Componente Scanner Nativo
 const NativeScanner = ({ onScan, onCancel }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -277,7 +291,6 @@ export default function App() {
   const [editingLog, setEditingLog] = useState(null);
 
   // --- HELPERS PARA ROLES ---
-  // Centralizamos la lógica para no tener errores de consistencia
   const isAdminOrMaster = ['masteradmin', 'admin'].includes(currentAuth.role);
   const isSupervisorOrHigher = ['masteradmin', 'admin', 'supervisor'].includes(currentAuth.role);
   const isMaster = currentAuth.role === 'masteradmin';
@@ -307,10 +320,14 @@ export default function App() {
   // --- AUTH INICIAL ---
   useEffect(() => {
     const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) {
+        console.error("Auth Error (Ignorable if persistence works):", e);
       }
     };
     initAuth();
@@ -329,7 +346,7 @@ export default function App() {
         const userStatusRef = doc(db, collectionPath, "status", currentAuth.name);
         try {
             await setDoc(userStatusRef, { name: currentAuth.name, role: currentAuth.role, lastSeen: serverTimestamp(), gps: gps }, { merge: true });
-        } catch(e) { console.log("Error status update", e); }
+        } catch(e) {}
     };
     reportPresence();
     const interval = setInterval(reportPresence, 60000);
@@ -338,23 +355,28 @@ export default function App() {
 
   // --- MONITOR DE USUARIOS ONLINE ---
   useEffect(() => {
-      if(currentAuth.role !== 'masteradmin') return;
-      const q = query(collection(db, collectionPath, "status"));
-      const unsubStatus = onSnapshot(q, (snapshot) => {
-          const now = new Date();
-          const active = [];
-          snapshot.forEach(doc => {
-              const data = doc.data();
-              if(data.lastSeen){
-                  const lastSeenDate = data.lastSeen.toDate();
-                  const diffMins = (now - lastSeenDate) / 1000 / 60;
-                  if(diffMins < 5) { active.push({...data, id: doc.id, minsAgo: Math.floor(diffMins)}); }
-              }
-          });
-          setOnlineUsers(active);
-      });
-      return () => unsubStatus();
-  }, [currentAuth.role]);
+      if(!isMaster) return;
+      // Para evitar errores si la colección no existe aún, usamos try
+      try {
+        const q = query(collection(db, collectionPath, "status"));
+        const unsubStatus = onSnapshot(q, (snapshot) => {
+            const now = new Date();
+            const active = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if(data.lastSeen){
+                    const lastSeenDate = data.lastSeen.toDate();
+                    const diffMins = (now - lastSeenDate) / 1000 / 60;
+                    if(diffMins < 5) { active.push({...data, id: doc.id, minsAgo: Math.floor(diffMins)}); }
+                }
+            });
+            setOnlineUsers(active);
+        }, (error) => {
+             console.log("Monitor offline (puede ser normal en data nueva)");
+        });
+        return () => unsubStatus();
+      } catch(e) {}
+  }, [isMaster]);
 
   // Recuperar sesión local
   useEffect(() => {
@@ -373,16 +395,16 @@ export default function App() {
     
     // Solo MasterAdmin lee la lista completa de usuarios
     let unsubUsers = () => {};
-    if (currentAuth.role === 'masteradmin') {
-        unsubUsers = onSnapshot(collection(db, collectionPath, "system_users"), s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    if (isMaster) {
+        unsubUsers = onSnapshot(collection(db, collectionPath, "system_users"), s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log("Users sync error (ok)", e));
     } else { setUsers([]); }
 
-    const unsubTrucks = onSnapshot(collection(db, collectionPath, "trucks"), s => setTrucks(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubLocs = onSnapshot(collection(db, collectionPath, "locations"), s => setLocations(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubTrucks = onSnapshot(collection(db, collectionPath, "trucks"), s => setTrucks(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log("Trucks sync error (ok)", e));
+    const unsubLocs = onSnapshot(collection(db, collectionPath, "locations"), s => setLocations(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log("Locs sync error (ok)", e));
     
     onSnapshot(doc(db, collectionPath, "settings", "general"), d => {
         if (d.exists()) setPricePerM3(d.data().pricePerM3 || 0);
-    });
+    }, e => {});
 
     const logsQuery = query(
         collection(db, collectionPath, "logs"), 
@@ -402,24 +424,20 @@ export default function App() {
       });
       data.sort((a, b) => b.createdAt - a.createdAt);
       setLogs(data);
-    });
+    }, e => console.log("Logs sync error", e));
 
     getDoc(doc(db, collectionPath, "daily_notes", selectedDate)).then(d => {
       if (d.exists()) setDailyNote(d.data().text || ""); else setDailyNote("");
-    });
+    }).catch(e=>{});
     
     return () => { unsubTrucks(); unsubLocs(); unsubUsers(); unsubLogs(); }
-  }, [user, selectedDate, currentAuth.role]); 
+  }, [user, selectedDate, isMaster]); 
 
   // --- LOGIN SIMPLE (SIN BLOQUEO) ---
   const handleLogin = async () => {
     if (!user) { alert("Error de conexión con Firebase. Recarga."); return; }
 
     const q = query(collection(db, collectionPath, "system_users"), where("pin", "==", authInput.pin));
-    
-    // NOTA: Firebase requiere índices para ciertas queries, pero esta es simple.
-    // Si falla, asegúrate de crear el usuario primero manual o usar la consola si no hay usuarios.
-    // Si no hay usuarios en DB, crear un "puerta trasera" temporal o usar consola Firebase.
     
     try {
         const snapshot = await getDocs(q);
@@ -481,11 +499,10 @@ export default function App() {
   };
 
   const savePrice = async () => {
-    if (currentAuth.role !== 'masteradmin') return alert("⛔ Solo MasterAdmin.");
+    if (!isMaster) return alert("⛔ Solo MasterAdmin.");
     try { await setDoc(doc(db, collectionPath, "settings", "general"), { pricePerM3: Number(pricePerM3) }, { merge: true }); alert("Precio actualizado."); } catch (e) { alert("Error: " + e.message); }
   };
 
-  // ... (Funciones de exportación Excel - Sin cambios mayores, solo referencias de auth)
   const handleExportDailyExcel = () => {
     if (!isSupervisorOrHigher) return alert("Permisos insuficientes");
     if (!window.XLSX) return alert("Cargando Excel...");
@@ -515,7 +532,6 @@ export default function App() {
     } catch (e) { alert("Error: " + e.message); }
   };
 
-  // --- EXPORTAR EXCEL MULTIPLE ---
   const handleExportExcel = async () => {
     if (!isAdminOrMaster) return alert("Solo Admin/Master");
     if (!window.XLSX) return alert("Cargando Excel...");
@@ -612,7 +628,6 @@ export default function App() {
       const wsSummary = XLSX_LIB.utils.aoa_to_sheet(summaryData);
       XLSX_LIB.utils.book_append_sheet(wb, wsSummary, "RESUMEN_TOTAL");
 
-      // --- 2. HOJAS POR DÍA ---
       const days = [...new Set(data.map(item => item.dateString))].sort();
 
       days.forEach(day => {
@@ -777,7 +792,6 @@ export default function App() {
     if (!pass) return;
     setLoading(true);
     try {
-        // Validación de seguridad para borrar
         const q = query(collection(db, collectionPath, "system_users"), where("name", "==", currentAuth.name), where("pin", "==", pass), where("role", "==", "masteradmin"));
         const snapshot = await getDocs(q);
         if (snapshot.empty) { setLoading(false); return alert("Clave incorrecta."); }
@@ -1000,7 +1014,10 @@ export default function App() {
                         <td style={styles.td}>{log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
                         <td style={styles.td}>{log.locationName}</td>
                         <td style={{...styles.td, textAlign:'right', fontWeight:'bold'}}>{log.capacidad}</td>
-                        <td style={styles.td} className="no-print">{isAdminOrMaster && <button onClick={()=>deleteItem('logs', log.id)} style={{border:'none', background:'none', color:'red'}}>🗑️</button>}</td>
+                        <td style={styles.td} className="no-print">
+                            {isSupervisorOrHigher && <button onClick={()=>setEditingLog(log)} style={{border:'none', background:'none', color:'#2563eb', marginRight:'10px', cursor:'pointer'}}><Icons.Edit/></button>}
+                            {isAdminOrMaster && <button onClick={()=>deleteItem('logs', log.id)} style={{border:'none', background:'none', color:'red', cursor:'pointer'}}>🗑️</button>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
