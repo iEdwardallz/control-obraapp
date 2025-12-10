@@ -27,37 +27,43 @@ import {
   where
 } from 'firebase/firestore';
 
-// --- ESTILOS ---
+// --- ESTILOS MODERNOS PRO ---
 const styles = {
-  container: { fontFamily: 'system-ui, -apple-system, sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '120px', color: '#1e293b', position: 'relative' },
-  header: { backgroundColor: '#0f172a', color: 'white', padding: '16px', position: 'sticky', top: 0, zIndex: 50, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' },
-  title: { fontSize: '1.1rem', fontWeight: '900', margin: 0, letterSpacing: '-0.025em', textTransform: 'uppercase' },
-  subtitle: { fontSize: '0.7rem', color: '#94a3b8', margin: 0, fontFamily: 'monospace' },
-  main: { maxWidth: '800px', margin: '0 auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' },
-  card: { backgroundColor: 'white', borderRadius: '16px', padding: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
-  kpiCard: { padding: '16px', borderRadius: '12px', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#2563eb' },
-  kpiValue: { fontSize: '2.2rem', fontWeight: '900', lineHeight: 1 },
-  kpiLabel: { fontSize: '0.65rem', textTransform: 'uppercase', opacity: 0.9, marginTop: '4px', fontWeight: 'bold', letterSpacing: '0.05em' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' },
-  th: { textAlign: 'left', padding: '10px', color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', borderBottom: '2px solid #e2e8f0', fontWeight: '800' },
-  td: { padding: '10px', borderBottom: '1px solid #f1f5f9' },
-  nav: { position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: 'white', borderTop: '1px solid #e2e8f0', padding: '12px', display: 'flex', justifyContent: 'space-around', zIndex: 40 },
-  navBtn: { background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.5rem', cursor: 'pointer' },
-  fab: { width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#2563eb', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', marginTop: '-40px', border: '4px solid #f8fafc', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)' },
-  input: { width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '1rem', backgroundColor: '#f8fafc', boxSizing: 'border-box' },
-  button: { width: '100%', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 'bold', cursor: 'pointer', backgroundColor: '#2563eb', color: 'white', transition: 'background 0.2s' },
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(2px)', overflowY: 'auto' },
-  modalContent: { backgroundColor: 'white', borderRadius: '20px', padding: '24px', width: '100%', maxWidth: '340px', textAlign: 'center', position: 'relative' },
-  modalContentOficio: { backgroundColor: 'white', borderRadius: '0', padding: '40px', width: '100%', maxWidth: '800px', minHeight: '80vh', textAlign: 'left', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
-  noteBlock: { backgroundColor: '#fefce8', border: '1px solid #fef08a', borderRadius: '12px', padding: '16px' },
-  textArea: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #fde047', minHeight: '80px', marginTop: '8px', fontSize: '0.9rem' },
-  closeBtn: { position: 'absolute', top: '16px', right: '16px', background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontSize: '1.2rem', fontWeight: 'bold' },
-  loginScreen: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#0f172a', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
-  loginBox: { backgroundColor: 'white', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
-  select: { width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '1rem', backgroundColor: '#f8fafc', marginBottom: '10px' },
-  bgBlueGradient: { background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' },
-  onlineIndicator: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', marginRight: '5px' },
-  onlineBadge: { fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', marginLeft: '5px' }
+  container: { fontFamily: "'Inter', system-ui, -apple-system, sans-serif", backgroundColor: '#f3f4f6', minHeight: '100vh', paddingBottom: '120px', color: '#334155', position: 'relative' },
+  header: { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white', padding: '16px 20px', position: 'sticky', top: 0, zIndex: 50, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  title: { fontSize: '1.25rem', fontWeight: '800', margin: 0, letterSpacing: '-0.03em', textTransform: 'uppercase', background: 'linear-gradient(to right, #ffffff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
+  subtitle: { fontSize: '0.75rem', color: '#94a3b8', margin: 0, fontFamily: "'JetBrains Mono', monospace", marginTop: '2px' },
+  main: { maxWidth: '900px', margin: '0 auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
+  card: { backgroundColor: 'white', borderRadius: '20px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01)' },
+  kpiCard: { padding: '20px', borderRadius: '16px', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(145deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)' },
+  kpiValue: { fontSize: '2rem', fontWeight: '800', lineHeight: 1, textShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+  kpiLabel: { fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.9, marginTop: '6px', fontWeight: '700', letterSpacing: '0.05em' },
+  table: { width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px', fontSize: '0.85rem' },
+  th: { textAlign: 'left', padding: '12px', color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.05em' },
+  td: { padding: '16px 12px', backgroundColor: 'white', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9', firstChild: { borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px' }, lastChild: { borderTopRightRadius: '10px', borderBottomRightRadius: '10px' } },
+  nav: { position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: '400px', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', borderRadius: '24px', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 40, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', border: '1px solid rgba(255,255,255,0.5)' },
+  navBtn: { background: 'none', border: 'none', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' },
+  navBtnActive: { color: '#2563eb' },
+  fab: { width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', marginTop: '-30px', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.4)', border: '4px solid #f8fafc', cursor: 'pointer', transition: 'transform 0.1s' },
+  input: { width: '100%', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', backgroundColor: '#f8fafc', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s', ':focus': { borderColor: '#3b82f6', boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)' } },
+  button: { width: '100%', padding: '16px', borderRadius: '14px', border: 'none', fontWeight: '700', cursor: 'pointer', backgroundColor: '#2563eb', color: 'white', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.9rem' },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)', overflowY: 'auto' },
+  modalContent: { backgroundColor: 'white', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '380px', textAlign: 'center', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
+  modalContentOficio: { backgroundColor: 'white', borderRadius: '8px', padding: '40px', width: '100%', maxWidth: '800px', minHeight: '80vh', textAlign: 'left', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
+  noteBlock: { backgroundColor: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(251, 191, 36, 0.1)' },
+  textArea: { width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #fcd34d', minHeight: '100px', marginTop: '12px', fontSize: '0.95rem', backgroundColor: '#ffffff' },
+  closeBtn: { position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontSize: '1.2rem', fontWeight: 'bold', transition: 'background 0.2s' },
+  loginScreen: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'radial-gradient(circle at top right, #334155, #0f172a)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
+  loginBox: { backgroundColor: 'white', borderRadius: '24px', padding: '40px 30px', width: '100%', maxWidth: '380px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' },
+  select: { width: '100%', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', backgroundColor: '#f8fafc', marginBottom: '10px', outline: 'none' },
+  bgBlueGradient: { background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' },
+  onlineIndicator: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', marginRight: '8px', boxShadow: '0 0 0 2px rgba(255,255,255,0.2)' },
+  onlineBadge: { fontSize: '0.7rem', padding: '4px 8px', borderRadius: '6px', marginLeft: '5px', fontWeight: 'bold' },
+  accordionBtn: { width: '100%', padding: '18px 20px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', textAlign: 'left', fontWeight: '700', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '10px', fontSize: '0.95rem', color: '#334155', transition: 'all 0.2s' },
+  rowCard: { background:'white', borderRadius:'12px', padding:'16px', marginBottom:'10px', border:'1px solid #f1f5f9', display:'flex', justifyContent:'space-between', alignItems:'center' },
+  inputIconGroup: { position: 'relative', marginBottom: '15px' },
+  inputIcon: { position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' },
+  inputWithIcon: { paddingLeft: '45px' }
 };
 
 const printStyles = `
@@ -90,33 +96,30 @@ const printStyles = `
   }
 `;
 
+// --- ICONOS SVG ---
 const Icons = {
-  Camera: () => <span>📷</span>,
-  Truck: () => <span>🚛</span>,
-  List: () => <span>📋</span>,
+  Camera: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>,
+  Truck: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  List: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
   Trash: () => <span>🗑️</span>,
   Edit: () => <span>✏️</span>,
-  Map: () => <span>📍</span>,
-  Eye: () => <span>👁️</span>,
-  EyeOff: () => <span>🙈</span>,
-  Print: () => <span>🖨️</span>,
-  World: () => <span>🌐</span>,
-  Lock: () => <span>🔒</span>,
-  Unlock: () => <span>🔓</span>
+  Eye: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  EyeOff: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
+  Report: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+  Building: () => <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" /></svg>,
+  User: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  Key: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
 };
 
 // --- FIREBASE CONFIG (ROBUSTA) ---
-// Intentamos cargar la config del entorno (Immersive). Si falla (Localhost), usamos la tuya original.
 let firebaseConfig;
 try {
-  // Intentamos obtener la variable global del entorno
   if (typeof __firebase_config !== 'undefined') {
     firebaseConfig = JSON.parse(__firebase_config);
   } else {
     throw new Error("No environment config");
   }
 } catch (e) {
-  // FALLBACK: Configuración original de tu archivo txt
   const savedKey = localStorage.getItem('custom_firebase_key');
   firebaseConfig = { 
     apiKey: savedKey || "AIzaSyDCcDPEHZO8K8XL9Ni2ZHTkwwb7jT8-BnQ", 
@@ -132,22 +135,13 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Intentar habilitar persistencia
 try { 
   enableIndexedDbPersistence(db).catch(err => console.log("Persistencia no disponible:", err.code)); 
 } catch(e){}
 
-// Usamos ID del entorno o un default si estamos local
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'controlexcavacion-default';
-
-// --- ATENCIÓN: RUTA DE COLECCIONES ---
-// Si estamos en entorno Immersive usamos artifacts, si estamos en local usamos tu ruta original para no perder datos.
 const isImmersive = typeof __app_id !== 'undefined';
-// Si prefieres usar SIEMPRE tu base de datos original, descomenta la linea de abajo:
 const collectionPath = isImmersive ? `artifacts/${appId}/public/data` : "registros/proyecto-master";
-// const collectionPath = "registros/proyecto-master"; // <--- Descomenta esto si quieres forzar tu DB original siempre
-
-// --- CONSTANTES ---
 
 // --- UTILIDADES ---
 const getTodayString = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -279,7 +273,17 @@ export default function App() {
   const [authInput, setAuthInput] = useState({ user: '', pin: '' });
   const [showPin, setShowPin] = useState(false);
   const [authError, setAuthError] = useState(null);
+
+  // Estados para menús colapsables
+  const [expandUsers, setExpandUsers] = useState(false);
+  const [expandAddTruck, setExpandAddTruck] = useState(false);
+  const [expandTruckList, setExpandTruckList] = useState(false);
   
+  // -- ESTADOS NUEVOS PARA PRECIO --
+  const [expandPriceConfig, setExpandPriceConfig] = useState(false);
+  const [pricePinInput, setPricePinInput] = useState("");
+  const [isPriceUnlocked, setIsPriceUnlocked] = useState(false);
+
   // Storage key para sesión local
   const SESSION_KEY = `control_obra_session_${appId}`; 
 
@@ -289,6 +293,11 @@ export default function App() {
   const [noteData, setNoteData] = useState(null);
   const [showNotePreview, setShowNotePreview] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
+
+  // --- CAMBIAR TÍTULO NAVEGADOR ---
+  useEffect(() => {
+    document.title = "Control Pro";
+  }, []);
 
   // --- HELPERS PARA ROLES ---
   const isAdminOrMaster = ['masteradmin', 'admin'].includes(currentAuth.role);
@@ -352,31 +361,6 @@ export default function App() {
     const interval = setInterval(reportPresence, 60000);
     return () => clearInterval(interval);
   }, [currentAuth, user]);
-
-  // --- MONITOR DE USUARIOS ONLINE ---
-  useEffect(() => {
-      if(!isMaster) return;
-      // Para evitar errores si la colección no existe aún, usamos try
-      try {
-        const q = query(collection(db, collectionPath, "status"));
-        const unsubStatus = onSnapshot(q, (snapshot) => {
-            const now = new Date();
-            const active = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                if(data.lastSeen){
-                    const lastSeenDate = data.lastSeen.toDate();
-                    const diffMins = (now - lastSeenDate) / 1000 / 60;
-                    if(diffMins < 5) { active.push({...data, id: doc.id, minsAgo: Math.floor(diffMins)}); }
-                }
-            });
-            setOnlineUsers(active);
-        }, (error) => {
-             console.log("Monitor offline (puede ser normal en data nueva)");
-        });
-        return () => unsubStatus();
-      } catch(e) {}
-  }, [isMaster]);
 
   // Recuperar sesión local
   useEffect(() => {
@@ -444,7 +428,6 @@ export default function App() {
         let validUser = null;
         snapshot.forEach(doc => {
             const u = doc.data();
-            // Comparamos nombre insensible a mayúsculas
             if(u.name.toLowerCase().trim() === authInput.user.toLowerCase().trim()) {
                 validUser = u;
             }
@@ -455,7 +438,6 @@ export default function App() {
             setCurrentAuth(s);
             localStorage.setItem(SESSION_KEY, JSON.stringify(s));
         } else {
-            // BACKDOOR TEMPORAL: Si la DB está vacía y meten admin/1234
             if (users.length === 0 && authInput.user === 'admin' && authInput.pin === '1234') {
                 const s = { name: 'AdminTemp', role: 'masteradmin', isAuthenticated: true };
                 setCurrentAuth(s);
@@ -498,9 +480,31 @@ export default function App() {
       }
   };
 
+  // Lógica para desbloquear el menú de precios
+  const handleUnlockPrice = () => {
+      if(pricePinInput === "20202025") {
+          setIsPriceUnlocked(true);
+          setPricePinInput("");
+      } else {
+          alert("PIN Incorrecto.");
+      }
+  };
+
+  // Lógica modificada para guardar precio con validación
   const savePrice = async () => {
     if (!isMaster) return alert("⛔ Solo MasterAdmin.");
-    try { await setDoc(doc(db, collectionPath, "settings", "general"), { pricePerM3: Number(pricePerM3) }, { merge: true }); alert("Precio actualizado."); } catch (e) { alert("Error: " + e.message); }
+    
+    // PEDIR PIN NUEVAMENTE
+    const confirmPin = prompt("⚠️ SEGURIDAD: Ingresa el PIN nuevamente para confirmar el cambio de precio:");
+    if(confirmPin !== "20202025") return alert("PIN Incorrecto. Cambio cancelado.");
+
+    try { 
+        await setDoc(doc(db, collectionPath, "settings", "general"), { pricePerM3: Number(pricePerM3) }, { merge: true }); 
+        alert("✅ Precio actualizado correctamente. Los viajes futuros usarán este nuevo precio."); 
+        // Opcional: volver a bloquear para seguridad
+        setIsPriceUnlocked(false);
+        setExpandPriceConfig(false);
+    } catch (e) { alert("Error: " + e.message); }
   };
 
   const handleExportDailyExcel = () => {
@@ -554,7 +558,6 @@ export default function App() {
       const FMT_NUMBER = "#,##0";
       const FMT_CURRENCY = "$#,##0.00";
 
-      // --- 1. HOJA TOTAL ---
       let totalM3 = 0;
       let totalImport = 0;
 
@@ -775,8 +778,23 @@ export default function App() {
   const handleEditLog = async () => { if(!editingLog) return; try { await updateDoc(doc(db, collectionPath, "logs", editingLog.id), { noteNumber: editingLog.noteNumber, locationName: editingLog.locationName }); setEditingLog(null); } catch(e) { alert("Error: " + e.message); } };
   const handleSaveNote = async () => { await setDoc(doc(db, collectionPath, "daily_notes", selectedDate), { text: dailyNote }); alert("✅ Nota guardada"); };
   const handleAddLocation = async () => { if (!isSupervisorOrHigher) return alert("Permisos insuficientes"); if(!newLocation.name) return alert("Faltan datos"); await addDoc(collection(db, collectionPath, "locations"), newLocation); setNewLocation({ name: '', cc: '' }); };
-  const handleAddTruck = async () => { if (!isAdminOrMaster) return alert("Solo Admin/Master"); const docRef = await addDoc(collection(db, collectionPath, "trucks"), { placas: newTruck.placas.toUpperCase(), capacidad: parseFloat(newTruck.capacidad), agrupacion: newTruck.agrupacion, createdAt: serverTimestamp() }); setNewTruck({ placas: '', capacidad: '', agrupacion: '' }); setShowQRModal({ id: docRef.id, placas: newTruck.placas.toUpperCase(), capacidad: newTruck.capacidad, agrupacion: newTruck.agrupacion }); };
-  const handleCreateUser = async () => { if (!isMaster) return alert("⛔ Solo MasterAdmin."); if (!newUser.name || !newUser.pin) return alert("Faltan datos"); await addDoc(collection(db, collectionPath, "system_users"), newUser); setNewUser({ name: '', pin: '', role: 'checker' }); alert("Usuario creado"); };
+  const handleAddTruck = async () => { if (!isAdminOrMaster) return alert("Solo Admin/Master"); const docRef = await addDoc(collection(db, collectionPath, "trucks"), { placas: newTruck.placas.toUpperCase(), capacidad: parseFloat(newTruck.capacidad), agrupacion: newTruck.agrupacion, createdAt: serverTimestamp() }); setNewTruck({ placas: '', capacidad: '', agrupacion: '' }); setShowQRModal({ id: docRef.id, placas: newTruck.placas.toUpperCase(), capacidad: newTruck.capacidad, agrupacion: newTruck.agrupacion }); alert("Camión agregado correctamente."); };
+  const handleCreateUser = async () => { 
+      if (!isMaster) return alert("⛔ Solo MasterAdmin."); 
+      if (!newUser.name || !newUser.pin) return alert("Faltan datos"); 
+      
+      // Validación: PIN Seguro
+      if (newUser.pin.length < 6) return alert("⚠️ Seguridad: El PIN debe tener al menos 6 dígitos.");
+
+      // Validación: Usuario Duplicado
+      // Convertimos a minúsculas para comparar
+      const userExists = users.some(u => u.name.toLowerCase() === newUser.name.trim().toLowerCase());
+      if (userExists) return alert("⚠️ Error: El nombre de usuario ya existe. Elige otro.");
+
+      await addDoc(collection(db, collectionPath, "system_users"), newUser); 
+      setNewUser({ name: '', pin: '', role: 'checker' }); 
+      alert("Usuario creado exitosamente."); 
+  };
   const deleteItem = async (coll, id) => { 
       // Permitimos a Admin eliminar cosas generales para igualar su experiencia, pero reservamos Usuarios/Wipe para Master
       if (!isAdminOrMaster && coll !== 'system_users') return alert("⛔ Solo Admin/Master.");
@@ -811,13 +829,24 @@ export default function App() {
     return (
       <div style={styles.loginScreen}>
         <div style={styles.loginBox}>
-          <h1>🚜 Control Obra V16.2</h1>
-          <input style={{...styles.input, marginBottom:'10px'}} placeholder="Usuario" value={authInput.user} onChange={e => setAuthInput({...authInput, user: e.target.value})} />
-          <div style={{position: 'relative', marginBottom: '20px'}}>
-            <input style={{...styles.input, paddingRight: '40px'}} type={showPin ? "text" : "password"} placeholder="PIN" value={authInput.pin} onChange={e => setAuthInput({...authInput, pin: e.target.value})} />
-            <button onClick={() => setShowPin(!showPin)} style={{position: 'absolute', right: '10px', top: '25%'}}>{showPin ? <Icons.EyeOff/> : <Icons.Eye/>}</button>
+          <div style={{display:'flex', justifyContent:'center', marginBottom:'20px'}}>
+              <Icons.Building />
           </div>
-          <button onClick={handleLogin} style={{...styles.button, ...styles.bgBlueGradient, color:'white'}}>ENTRAR AL SISTEMA</button>
+          <h1 style={{color: '#1e293b', margin: '0 0 5px 0', fontSize:'1.8rem', fontWeight:'800'}}>CONTROL OBRA PRO</h1>
+          <p style={{color:'#64748b', margin:'0 0 30px 0', fontSize:'0.9rem'}}>Sistema de Gestión de Obra</p>
+          
+          <div style={styles.inputIconGroup}>
+            <div style={styles.inputIcon}><Icons.User/></div>
+            <input style={{...styles.input, ...styles.inputWithIcon}} placeholder="Usuario" value={authInput.user} onChange={e => setAuthInput({...authInput, user: e.target.value})} />
+          </div>
+          
+          <div style={styles.inputIconGroup}>
+            <div style={styles.inputIcon}><Icons.Key/></div>
+            <input style={{...styles.input, ...styles.inputWithIcon, paddingRight:'45px'}} type={showPin ? "text" : "password"} placeholder="PIN de Acceso" value={authInput.pin} onChange={e => setAuthInput({...authInput, pin: e.target.value})} />
+            <button onClick={() => setShowPin(!showPin)} style={{position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#94a3b8'}}>{showPin ? <Icons.EyeOff/> : <Icons.Eye/>}</button>
+          </div>
+
+          <button onClick={handleLogin} style={{...styles.button, ...styles.bgBlueGradient, color:'white', boxShadow: '0 10px 20px -5px rgba(37, 99, 235, 0.4)', marginTop:'10px'}}>INICIAR SESIÓN</button>
         </div>
       </div>
     );
@@ -828,26 +857,26 @@ export default function App() {
       <style>{printStyles}</style>
       <header style={styles.header} className="no-print">
         <div>
-          <h1 style={styles.title}>🚜 Control Obra</h1>
+          <h1 style={styles.title}>Control De Obra Pro</h1>
           <p style={styles.subtitle}>
-             <span style={{...styles.onlineIndicator, backgroundColor: isOnline ? '#22c55e' : '#ef4444'}}></span>
-             {isOnline ? '' : 'OFFLINE - '} 
-             {currentAuth.name} | {currentAuth.role.toUpperCase()}
+             <span style={{...styles.onlineIndicator, backgroundColor: isOnline ? '#4ade80' : '#ef4444'}}></span>
+             {isOnline ? 'EN LÍNEA' : 'OFFLINE'} 
+             <span style={{opacity: 0.7}}> | {currentAuth.name}</span>
           </p>
         </div>
-        <div style={{textAlign:'right'}}>
-           <button onClick={handleLogout} style={{fontSize:'0.7rem', color:'#fca5a5', background:'none', border:'none'}}>SALIR</button>
-           <input type="date" value={selectedDate} onChange={(e) => e.target.value && setSelectedDate(e.target.value)} style={{background:'#334155', border:'none', color:'white', borderRadius:'4px'}} />
+        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+           <input type="date" value={selectedDate} onChange={(e) => e.target.value && setSelectedDate(e.target.value)} style={{background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'white', borderRadius:'8px', padding:'6px 10px', fontSize:'0.85rem', outline:'none'}} />
+           <button onClick={handleLogout} style={{fontSize:'0.75rem', color:'#fca5a5', background:'none', border:'1px solid #fca5a5', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold'}}>SALIR</button>
         </div>
       </header>
 
       {editingLog && (
           <div style={styles.modalOverlay}>
               <div style={styles.modalContent}>
-                  <h3>✏️ Editar Viaje</h3>
-                  <div style={{textAlign:'left', marginBottom:10}}><label style={{fontSize:'0.8rem'}}>Nota Física:</label><input style={styles.input} value={editingLog.noteNumber} onChange={e=>setEditingLog({...editingLog, noteNumber: e.target.value})} /></div>
-                  <div style={{textAlign:'left', marginBottom:20}}><label style={{fontSize:'0.8rem'}}>Zona/Banco:</label><select style={styles.select} value={editingLog.locationName} onChange={e=>setEditingLog({...editingLog, locationName: e.target.value})}>{locations.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}</select></div>
-                  <div style={{display:'flex', gap:10}}><button onClick={()=>setEditingLog(null)} style={{...styles.button, background:'#ef4444'}}>Cancelar</button><button onClick={handleEditLog} style={styles.button}>Guardar</button></div>
+                  <h3 style={{marginTop:0, color:'#1e293b'}}>✏️ Editar Viaje</h3>
+                  <div style={{textAlign:'left', marginBottom:15}}><label style={{fontSize:'0.85rem', fontWeight:'600', color:'#64748b', marginBottom:'5px', display:'block'}}>Nota Física:</label><input style={styles.input} value={editingLog.noteNumber} onChange={e=>setEditingLog({...editingLog, noteNumber: e.target.value})} /></div>
+                  <div style={{textAlign:'left', marginBottom:25}}><label style={{fontSize:'0.85rem', fontWeight:'600', color:'#64748b', marginBottom:'5px', display:'block'}}>Zona/Banco:</label><select style={styles.select} value={editingLog.locationName} onChange={e=>setEditingLog({...editingLog, locationName: e.target.value})}>{locations.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}</select></div>
+                  <div style={{display:'flex', gap:15}}><button onClick={()=>setEditingLog(null)} style={{...styles.button, background:'#ef4444', color:'white', flex:1}}>Cancelar</button><button onClick={handleEditLog} style={{...styles.button, flex:1}}>Guardar</button></div>
               </div>
           </div>
       )}
@@ -855,61 +884,65 @@ export default function App() {
       {showNoteModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
-            <h2 style={{color: '#b91c1c'}}>📝 Primer Viaje del Día</h2>
-            <p>Ingresa el número de Nota/Folio físico:</p>
-            <input style={{...styles.input, textAlign:'center', fontSize:'1.5rem', fontWeight:'bold'}} value={noteInput} onChange={e => setNoteInput(e.target.value)} placeholder="000" autoFocus />
-            <div style={{display:'flex', gap:'10px', marginTop:'20px'}}>
-                 <button onClick={cancelNote} style={{...styles.button, backgroundColor:'#ef4444'}}>CANCELAR</button>
-                 <button onClick={confirmNote} style={{...styles.button, ...styles.bgBlueGradient}}>CONFIRMAR</button>
+            <h2 style={{color: '#b91c1c', marginTop:0}}>📝 Nota Inicial</h2>
+            <p style={{color:'#64748b', marginBottom:'20px'}}>Ingresa el número de folio físico:</p>
+            <input style={{...styles.input, textAlign:'center', fontSize:'1.8rem', fontWeight:'800', letterSpacing:'0.1em'}} value={noteInput} onChange={e => setNoteInput(e.target.value)} placeholder="000" autoFocus />
+            <div style={{display:'flex', gap:'15px', marginTop:'25px'}}>
+                 <button onClick={cancelNote} style={{...styles.button, backgroundColor:'#ef4444', flex:1}}>CANCELAR</button>
+                 <button onClick={confirmNote} style={{...styles.button, ...styles.bgBlueGradient, flex:1}}>CONFIRMAR</button>
             </div>
-            {processingScan && <p style={{marginTop:10, color:'#64748b', fontSize:'0.8rem'}}>⏳ Guardando ubicación GPS...</p>}
+            {processingScan && <p style={{marginTop:15, color:'#64748b', fontSize:'0.85rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px'}}>⏳ Guardando ubicación GPS...</p>}
           </div>
         </div>
       )}
       
       {showNotePreview && noteData && (
           <div style={styles.modalOverlay}>
-              <div style={{...styles.modalContent, maxWidth: '600px', width:'95%', textAlign:'left'}}>
+              <div style={{...styles.modalContent, maxWidth: '600px', width:'95%', textAlign:'left', padding:'25px'}}>
                    <button onClick={() => setShowNotePreview(false)} style={styles.closeBtn}>×</button>
                    <div id="print-note">
-                       <h2 style={{textAlign:'center', borderBottom:'2px solid #ccc', paddingBottom:'10px'}}>NOTA DE REMISIÓN</h2>
-                       <div style={{display:'flex', justifyContent:'space-between', marginTop:'15px'}}>
-                           <strong>FECHA: {noteData.date}</strong>
-                           <strong>PLACA: {noteData.plate}</strong>
+                       <h2 style={{textAlign:'center', borderBottom:'2px solid #e2e8f0', paddingBottom:'15px', margin:'0 0 20px 0', color:'#1e293b'}}>NOTA DE REMISIÓN</h2>
+                       <div style={{display:'flex', justifyContent:'space-between', marginBottom:'5px'}}>
+                           <span style={{color:'#64748b', fontSize:'0.85rem'}}>FECHA:</span>
+                           <strong style={{fontSize:'1rem'}}>{noteData.date}</strong>
                        </div>
-                       <p>PROVEEDOR: {noteData.provider}</p>
+                       <div style={{display:'flex', justifyContent:'space-between', marginBottom:'15px'}}>
+                           <span style={{color:'#64748b', fontSize:'0.85rem'}}>PLACA:</span>
+                           <strong style={{fontSize:'1.1rem', color:'#2563eb'}}>{noteData.plate}</strong>
+                       </div>
+                       <p style={{background:'#f8fafc', padding:'10px', borderRadius:'8px', fontSize:'0.9rem', marginBottom:'20px'}}><strong>PROVEEDOR:</strong> {noteData.provider}</p>
                        
-                       <table style={{width:'100%', marginTop:'20px', borderCollapse:'collapse', fontSize:'0.8rem'}}>
+                       <table style={{width:'100%', borderCollapse:'collapse', fontSize:'0.85rem'}}>
                            <thead>
-                               <tr style={{background:'#f0f0f0'}}>
-                                   <th style={{padding:'5px', border:'1px solid #ccc'}}>HORA</th>
-                                   <th style={{padding:'5px', border:'1px solid #ccc'}}>NOTA</th>
-                                   <th style={{padding:'5px', border:'1px solid #ccc'}}>ZONA</th>
-                                   <th style={{padding:'5px', border:'1px solid #ccc'}}>M3</th>
+                               <tr style={{background:'#f1f5f9', color:'#475569'}}>
+                                   <th style={{padding:'8px', border:'1px solid #e2e8f0', textAlign:'center'}}>HORA</th>
+                                   <th style={{padding:'8px', border:'1px solid #e2e8f0', textAlign:'center'}}>NOTA</th>
+                                   <th style={{padding:'8px', border:'1px solid #e2e8f0'}}>ZONA</th>
+                                   <th style={{padding:'8px', border:'1px solid #e2e8f0', textAlign:'right'}}>M3</th>
                                </tr>
                            </thead>
                            <tbody>
                                {noteData.trips.map((t, idx) => (
                                    <tr key={idx}>
-                                       <td style={{padding:'5px', border:'1px solid #ccc'}}>{t.createdAt ? t.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</td>
-                                       <td style={{padding:'5px', border:'1px solid #ccc'}}>{t.noteNumber}</td>
-                                       <td style={{padding:'5px', border:'1px solid #ccc'}}>{t.locationName}</td>
-                                       <td style={{padding:'5px', border:'1px solid #ccc'}}>{t.capacidad}</td>
+                                       <td style={{padding:'8px', border:'1px solid #e2e8f0', textAlign:'center'}}>{t.createdAt ? t.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</td>
+                                       <td style={{padding:'8px', border:'1px solid #e2e8f0', textAlign:'center', fontWeight:'bold'}}>{t.noteNumber}</td>
+                                       <td style={{padding:'8px', border:'1px solid #e2e8f0'}}>{t.locationName}</td>
+                                       <td style={{padding:'8px', border:'1px solid #e2e8f0', textAlign:'right', fontWeight:'bold'}}>{t.capacidad}</td>
                                    </tr>
                                ))}
                            </tbody>
                        </table>
                        
-                       <div style={{marginTop:'20px', textAlign:'right', fontSize:'1rem'}}>
-                           <p>TOTAL VIAJES: <strong>{noteData.totalViajes}</strong></p>
-                           <p>TOTAL VOLUMEN: <strong>{noteData.totalM3} m³</strong></p>
+                       <div style={{marginTop:'25px', textAlign:'right', fontSize:'1rem', background:'#f8fafc', padding:'15px', borderRadius:'12px'}}>
+                           <p style={{margin:'5px 0'}}>TOTAL VIAJES: <strong style={{fontSize:'1.2rem'}}>{noteData.totalViajes}</strong></p>
+                           <p style={{margin:'5px 0', color:'#2563eb'}}>TOTAL VOLUMEN: <strong style={{fontSize:'1.2rem'}}>{noteData.totalM3} m³</strong></p>
                        </div>
-                       <div style={{marginTop: '30px', textAlign:'center', borderTop:'1px solid #ccc', paddingTop:'5px'}}>
+                       <div style={{marginTop: '40px', textAlign:'center', borderTop:'1px dashed #cbd5e1', paddingTop:'15px', color:'#94a3b8', fontSize:'0.8rem'}}>
                            Firma de Conformidad
                        </div>
                    </div>
                    
-                   <div style={{display:'flex', gap:'10px', marginTop:'20px'}}>
+                   <div style={{display:'flex', gap:'10px', marginTop:'25px'}}>
                        <button onClick={() => {
                            const printContent = document.getElementById('print-note').innerHTML;
                            const originalContents = document.body.innerHTML;
@@ -917,7 +950,7 @@ export default function App() {
                            window.print();
                            document.body.innerHTML = originalContents;
                            window.location.reload(); 
-                       }} style={{...styles.button, ...styles.bgBlueGradient}}>IMPRIMIR PDF</button>
+                       }} style={{...styles.button, flex:1, fontSize:'0.8rem'}}>IMPRIMIR PDF</button>
                        
                        <button onClick={() => {
                             const wb = window.XLSX.utils.book_new();
@@ -944,7 +977,7 @@ export default function App() {
                             const ws = window.XLSX.utils.aoa_to_sheet(data);
                             window.XLSX.utils.book_append_sheet(wb, ws, "NOTA");
                             window.XLSX.writeFile(wb, `Nota_${noteData.plate}_${noteData.date}.xlsx`);
-                       }} style={{...styles.button, ...styles.bgBlueGradient}}>DESCARGAR EXCEL</button>
+                       }} style={{...styles.button, background:'#10b981', flex:1, fontSize:'0.8rem'}}>EXCEL</button>
                    </div>
               </div>
           </div>
@@ -953,7 +986,11 @@ export default function App() {
       {isScanning && <NativeScanner onScan={handleScan} onCancel={() => setIsScanning(false)} />}
       {processingScan && !showNoteModal && (
           <div style={styles.modalOverlay}>
-              <div style={{color:'white', fontWeight:'bold', textShadow:'0 2px 4px rgba(0,0,0,0.5)'}}>⏳ Registrando...</div>
+              <div style={{color:'white', fontWeight:'bold', fontSize:'1.2rem', display:'flex', flexDirection:'column', alignItems:'center', gap:'15px'}}>
+                  <div style={{width:'40px', height:'40px', border:'4px solid rgba(255,255,255,0.3)', borderTop:'4px solid white', borderRadius:'50%', animation:'spin 1s linear infinite'}}></div>
+                  ⏳ Registrando...
+                  <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+              </div>
           </div>
       )}
 
@@ -961,62 +998,95 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <div className="no-print-padding">
             {/* KPI CARDS */}
-            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'8px'}} className="no-print">
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'15px'}} className="no-print">
               <div style={styles.kpiCard}><div style={styles.kpiValue}>{logs.length}</div><div style={styles.kpiLabel}>Viajes</div></div>
-              <div style={{...styles.kpiCard, background:'#059669'}}><div style={styles.kpiValue}>{logs.reduce((a,c)=>a+(c.capacidad||0),0)}</div><div style={styles.kpiLabel}>M³ Total</div></div>
-              <div style={{...styles.kpiCard, background:'#7c3aed'}}><div style={styles.kpiValue}>{[...new Set(logs.map(l=>l.placas))].length}</div><div style={styles.kpiLabel}>Camiones</div></div>
+              <div style={{...styles.kpiCard, background:'linear-gradient(145deg, #059669, #047857)'}}><div style={styles.kpiValue}>{logs.reduce((a,c)=>a+(c.capacidad||0),0)}</div><div style={styles.kpiLabel}>M³ Total</div></div>
+              <div style={{...styles.kpiCard, background:'linear-gradient(145deg, #7c3aed, #6d28d9)'}}><div style={styles.kpiValue}>{[...new Set(logs.map(l=>l.placas))].length}</div><div style={styles.kpiLabel}>Camiones</div></div>
             </div>
 
             {isAdminOrMaster && (
-              <div style={{...styles.card, marginTop: '20px', border: '2px solid #3b82f6'}} className="no-print">
-                <h3 style={{margin:'0 0 10px 0', fontSize:'0.9rem', color:'#1e40af'}}>📑 Reporte y Finanzas (Admin/Master)</h3>
+              <div style={{...styles.card, marginTop: '25px', border: '1px solid #bfdbfe', background:'#eff6ff'}} className="no-print">
+                <h3 style={{margin:'0 0 15px 0', fontSize:'1rem', color:'#1e40af', display:'flex', alignItems:'center', gap:'8px'}}>
+                    <Icons.Report/> Reporte y Finanzas
+                </h3>
                 
-                {/* CONFIGURAR PRECIO */}
-                <div style={{marginBottom:'15px', paddingBottom:'15px', borderBottom:'1px solid #e2e8f0'}}>
-                    <label style={{fontSize:'0.75rem', fontWeight:'bold', display:'block'}}>Precio por m³ ($):</label>
-                    <div style={{display:'flex', gap:'8px'}}>
-                        <input type="number" value={pricePerM3} onChange={e=>setPricePerM3(e.target.value)} style={{...styles.input, padding:'6px'}} />
-                        <button onClick={savePrice} style={{...styles.button, width:'auto', fontSize:'0.75rem', backgroundColor: '#15803d'}}>Guardar Precio</button>
-                    </div>
-                </div>
+                {/* CONFIGURAR PRECIO (SOLO MASTER) */}
+                {isMaster && (
+                    <div style={{marginBottom:'15px', paddingBottom:'15px', borderBottom:'1px solid #dbeafe'}}>
+                        <button 
+                            onClick={() => setExpandPriceConfig(!expandPriceConfig)} 
+                            style={{...styles.accordionBtn, background:'white', border:'1px solid #bfdbfe'}}
+                        >
+                            <span style={{color:'#1e40af'}}>💰 Configurar Precio Base (Master)</span>
+                            <span>{expandPriceConfig ? '▲' : '▼'}</span>
+                        </button>
 
-                <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
-                  <input type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)} style={{...styles.input, padding:'8px'}} />
-                  <span>a</span>
-                  <input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} style={{...styles.input, padding:'8px'}} />
+                        {expandPriceConfig && (
+                            <div style={{padding:'15px', marginTop:'10px', backgroundColor:'white', borderRadius:'12px', border:'1px solid #bfdbfe'}}>
+                                {!isPriceUnlocked ? (
+                                    <div style={{display:'flex', gap:'10px'}}>
+                                        <input 
+                                            type="password" 
+                                            placeholder="PIN de Seguridad" 
+                                            value={pricePinInput} 
+                                            onChange={e=>setPricePinInput(e.target.value)} 
+                                            style={{...styles.input, padding:'10px'}} 
+                                        />
+                                        <button onClick={handleUnlockPrice} style={{...styles.button, width:'auto', fontSize:'0.8rem', padding:'0 20px'}}>Desbloquear</button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <label style={{fontSize:'0.8rem', fontWeight:'700', color:'#1e40af', display:'block', marginBottom:'8px'}}>Precio por m³ ($):</label>
+                                        <div style={{display:'flex', gap:'10px'}}>
+                                            <input type="number" value={pricePerM3} onChange={e=>setPricePerM3(e.target.value)} style={{...styles.input, padding:'10px'}} />
+                                            <button onClick={savePrice} style={{...styles.button, width:'auto', fontSize:'0.8rem', backgroundColor: '#15803d', padding:'0 20px'}}>Guardar</button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div style={{display:'flex', gap:'10px', alignItems:'center', flexWrap:'wrap'}}>
+                  <div style={{flex:1}}><span style={{fontSize:'0.75rem', fontWeight:'bold', color:'#64748b'}}>DESDE:</span><input type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)} style={{...styles.input, padding:'8px'}} /></div>
+                  <div style={{flex:1}}><span style={{fontSize:'0.75rem', fontWeight:'bold', color:'#64748b'}}>HASTA:</span><input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} style={{...styles.input, padding:'8px'}} /></div>
                 </div>
-                <button onClick={handleExportExcel} style={{...styles.button, marginTop:'10px', fontSize:'0.8rem'}}>DESCARGAR EXCEL MULTI-HOJA</button>
+                <button onClick={handleExportExcel} style={{...styles.button, marginTop:'15px', fontSize:'0.85rem', background:'white', color:'#1e40af', border:'2px solid #1e40af'}}>📥 DESCARGAR REPORTE EXCEL</button>
               </div>
             )}
             
             {/* BOTÓN DESCARGAR REPORTE DEL DÍA (SUPERVISOR/ADMIN/MASTER) */}
             {isSupervisorOrHigher && (
-                 <div style={{...styles.card, marginTop:'20px', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#f0fdf4', borderColor:'#86efac'}}>
+                 <div style={{...styles.card, marginTop:'20px', display:'flex', justifyContent:'space-between', alignItems:'center', background:'linear-gradient(to right, #ecfdf5, #ffffff)', borderColor:'#a7f3d0', padding:'20px'}}>
                      <div>
-                         <h3 style={{margin:0, fontSize:'0.9rem', color:'#166534'}}>📊 Reporte Diario ({selectedDate})</h3>
-                         <p style={{margin:0, fontSize:'0.7rem', color:'#15803d'}}>Descargar Excel exclusivo de este día</p>
+                         <h3 style={{margin:0, fontSize:'1rem', color:'#065f46'}}>📊 Reporte Diario ({selectedDate})</h3>
+                         <p style={{margin:'4px 0 0 0', fontSize:'0.75rem', color:'#059669'}}>Excel detallado de la jornada actual</p>
                      </div>
-                     <button onClick={handleExportDailyExcel} style={{...styles.button, width:'auto', padding:'8px 16px', fontSize:'0.8rem', background:'#16a34a'}}>DESCARGAR</button>
+                     <button onClick={handleExportDailyExcel} style={{...styles.button, width:'auto', padding:'10px 20px', fontSize:'0.8rem', background:'#10b981', boxShadow:'0 4px 10px rgba(16, 185, 129, 0.3)'}}>DESCARGAR</button>
                  </div>
             )}
 
-            <div style={{...styles.card, padding:0, overflow:'hidden', marginTop:'20px'}} className="print-only">
-               <div style={{padding:'12px', background:'#f8fafc', fontWeight:'bold', borderBottom:'1px solid #eee'}}>📋 {selectedDate}</div>
+            <div style={{...styles.card, padding:0, overflow:'hidden', marginTop:'25px'}} className="print-only">
+               <div style={{padding:'16px 20px', background:'#f8fafc', fontWeight:'800', borderBottom:'1px solid #e2e8f0', color:'#334155', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                   <span>📋 REGISTRO DE VIAJES</span>
+                   <span style={{fontSize:'0.75rem', background:'#e2e8f0', padding:'4px 8px', borderRadius:'6px'}}>{logs.length} Total</span>
+               </div>
                <div style={{overflowX:'auto'}}>
                 <table style={styles.table}>
-                  <thead><tr><th style={styles.th}>#</th><th style={styles.th}>Placa</th><th style={styles.th}>Nota</th><th style={styles.th}>Hora</th><th style={styles.th}>Zona</th><th style={{...styles.th, textAlign:'right'}}>M³</th><th style={styles.th}></th></tr></thead>
+                  <thead><tr style={{background:'#f9fafb'}}><th style={styles.th}>#</th><th style={styles.th}>Placa</th><th style={styles.th}>Nota</th><th style={styles.th}>Hora</th><th style={styles.th}>Zona</th><th style={{...styles.th, textAlign:'right'}}>M³</th><th style={styles.th}></th></tr></thead>
                   <tbody>
                     {logs.map((log, i) => (
                       <tr key={log.id} style={{display: i < 10 ? 'table-row' : 'none'}} className="print-row">
                         <td style={styles.td}>{logs.length - i}</td>
-                        <td style={{...styles.td, fontWeight:'bold'}}>{log.placas}</td>
-                        <td style={{...styles.td, color:'#2563eb'}}>{log.noteNumber || '-'}</td>
+                        <td style={{...styles.td, fontWeight:'bold', color:'#1e293b'}}>{log.placas}</td>
+                        <td style={{...styles.td, color:'#2563eb', fontWeight:'600'}}>{log.noteNumber || '-'}</td>
                         <td style={styles.td}>{log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
-                        <td style={styles.td}>{log.locationName}</td>
-                        <td style={{...styles.td, textAlign:'right', fontWeight:'bold'}}>{log.capacidad}</td>
+                        <td style={styles.td}><span style={{background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px', fontSize:'0.75rem'}}>{log.locationName}</span></td>
+                        <td style={{...styles.td, textAlign:'right', fontWeight:'800'}}>{log.capacidad}</td>
                         <td style={styles.td} className="no-print">
-                            {isSupervisorOrHigher && <button onClick={()=>setEditingLog(log)} style={{border:'none', background:'none', color:'#2563eb', marginRight:'10px', cursor:'pointer'}}><Icons.Edit/></button>}
-                            {isAdminOrMaster && <button onClick={()=>deleteItem('logs', log.id)} style={{border:'none', background:'none', color:'red', cursor:'pointer'}}>🗑️</button>}
+                            {isSupervisorOrHigher && <button onClick={()=>setEditingLog(log)} style={{border:'none', background:'#eff6ff', color:'#2563eb', marginRight:'8px', cursor:'pointer', padding:'6px', borderRadius:'6px'}}><Icons.Edit/></button>}
+                            {isAdminOrMaster && <button onClick={()=>deleteItem('logs', log.id)} style={{border:'none', background:'#fef2f2', color:'#ef4444', cursor:'pointer', padding:'6px', borderRadius:'6px'}}><Icons.Trash/></button>}
                         </td>
                       </tr>
                     ))}
@@ -1026,121 +1096,198 @@ export default function App() {
                </div>
             </div>
 
-            <div style={{...styles.card, marginTop: '20px'}}>
-                <h3 style={{margin:'0 0 10px 0', fontSize:'0.9rem', color:'#64748b'}}>🚛 Flotilla Activa ({selectedDate})</h3>
-                <div style={{display:'flex', flexWrap:'wrap', gap:'8px'}}>
+            <div style={{...styles.card, marginTop: '25px', padding:'20px'}}>
+                <h3 style={{margin:'0 0 15px 0', fontSize:'1rem', color:'#64748b'}}>🚛 Flotilla Activa</h3>
+                <div style={{display:'flex', flexWrap:'wrap', gap:'10px'}}>
                     {[...new Set(logs.map(l=>l.placas))].map(placa => (
-                        <button key={placa} onClick={() => handleTruckClick(placa)} style={{background:'#e0f2fe', border:'none', color:'#0369a1', padding:'4px 8px', borderRadius:'6px', fontSize:'0.8rem', fontWeight:'bold', cursor:'pointer'}}>{placa}</button>
+                        <button key={placa} onClick={() => handleTruckClick(placa)} style={{background:'white', border:'1px solid #cbd5e1', color:'#334155', padding:'8px 12px', borderRadius:'10px', fontSize:'0.85rem', fontWeight:'700', cursor:'pointer', boxShadow:'0 2px 4px rgba(0,0,0,0.05)'}}>{placa}</button>
                     ))}
-                    {logs.length === 0 && <span style={{color:'#94a3b8', fontSize:'0.8rem'}}>Sin actividad hoy</span>}
+                    {logs.length === 0 && <span style={{color:'#94a3b8', fontSize:'0.9rem', fontStyle:'italic'}}>No hay camiones registrados hoy.</span>}
                 </div>
-                {isSupervisorOrHigher && <p style={{fontSize:'0.6rem', color:'#94a3b8', marginTop:'5px'}}>* Click en la placa para ver Nota de Remisión</p>}
+                {isSupervisorOrHigher && <p style={{fontSize:'0.7rem', color:'#94a3b8', marginTop:'15px', display:'flex', alignItems:'center', gap:'5px'}}><Icons.Eye/> Toca una placa para ver su Nota de Remisión</p>}
             </div>
 
             <div style={styles.noteBlock} className="no-print">
-              <strong>📝 Nota:</strong>
-              <textarea style={{...styles.textArea, minHeight:'60px'}} value={dailyNote} onChange={e=>setDailyNote(e.target.value)} />
-              <button onClick={handleSaveNote} style={{...styles.button, background:'#f59e0b', marginTop:'5px'}}>Guardar</button>
+              <strong style={{color:'#92400e', display:'flex', alignItems:'center', gap:'5px'}}>📝 Nota del Día:</strong>
+              <textarea style={styles.textArea} value={dailyNote} onChange={e=>setDailyNote(e.target.value)} placeholder="Escribe observaciones importantes..." />
+              <button onClick={handleSaveNote} style={{...styles.button, background:'#f59e0b', marginTop:'10px', width:'auto', fontSize:'0.8rem', padding:'10px 20px', color:'white'}}>Guardar Nota</button>
             </div>
           </div>
         )}
 
         {/* ... (RESTO DE PESTAÑAS IGUALES) ... */}
         {activeTab === 'scanner' && (
-          <div style={{textAlign:'center'}}>
-             <div style={{...styles.card, marginBottom:'20px'}}>
-               <h3>1. Selecciona Zona</h3>
-               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
-                 {locations.map(l => <button key={l.id} onClick={()=>setSelectedLocationId(l.id)} style={{padding:'15px', border: selectedLocationId===l.id?'2px solid blue':'1px solid #eee', borderRadius:'10px', background:'white'}}><b>{l.name}</b></button>)}
+          <div style={{textAlign:'center', padding:'20px'}}>
+             <div style={{...styles.card, marginBottom:'25px', padding:'30px'}}>
+               <h3 style={{marginTop:0, marginBottom:'20px', color:'#1e293b'}}>📍 1. Selecciona Zona</h3>
+               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'15px'}}>
+                 {locations.map(l => (
+                    <button 
+                        key={l.id} 
+                        onClick={()=>setSelectedLocationId(l.id)} 
+                        style={{
+                            padding:'20px', 
+                            border: selectedLocationId===l.id?'2px solid #2563eb':'1px solid #e2e8f0', 
+                            borderRadius:'16px', 
+                            background: selectedLocationId===l.id?'#eff6ff':'white',
+                            color: selectedLocationId===l.id?'#1e40af':'#334155',
+                            fontWeight: '700',
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                            transition: 'all 0.2s',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {l.name}
+                    </button>
+                 ))}
                </div>
              </div>
-             <button onClick={()=>{ if(!currentAuth.isAuthenticated) return setShowAuthModal(true); if(!selectedLocationId) return alert("Selecciona zona"); setIsScanning(true); }} style={{...styles.button, padding:'20px', fontSize:'1.2rem'}}>📷 ESCANEAR QR</button>
+             <button 
+                onClick={()=>{ if(!currentAuth.isAuthenticated) return setShowAuthModal(true); if(!selectedLocationId) return alert("Selecciona zona"); setIsScanning(true); }} 
+                style={{
+                    ...styles.button, 
+                    padding:'25px', 
+                    fontSize:'1.3rem', 
+                    borderRadius:'24px', 
+                    boxShadow:'0 20px 25px -5px rgba(37, 99, 235, 0.3)',
+                    display:'flex',
+                    alignItems:'center',
+                    justifyContent:'center',
+                    gap:'15px'
+                }}
+            >
+                <Icons.Camera/> ESCANEAR QR
+            </button>
           </div>
         )}
 
         {activeTab === 'config' && (
           <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
             
-            {/* CORRECCIÓN AQUI: Se cambió la verificación de nombre "EduardoAdmin" por verificación de rol "masteradmin" */}
+            {/* --- GESTIÓN DE USUARIOS (MASTER) --- */}
             {isMaster && (
-              <div style={{...styles.card, border:'2px solid #3b82f6', backgroundColor:'#eff6ff'}}>
-                <h3 style={{color:'#1e40af', marginTop:0}}>👥 Gestión de Usuarios (Master)</h3>
-                <div style={{display:'flex', gap:'10px', marginBottom:'10px', flexDirection: 'column'}}>
-                  <div style={{display:'flex', gap:'10px'}}>
-                      <input style={{...styles.input, flex:2}} placeholder="Nombre" value={newUser.name} onChange={e=>setNewUser({...newUser, name:e.target.value})} />
-                      <input style={{...styles.input, flex:1}} type="tel" placeholder="PIN" value={newUser.pin} onChange={e=>setNewUser({...newUser, pin:e.target.value})} />
-                  </div>
-                  <select style={styles.select} value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})}>
-                      <option value="checker">Checador (Solo Escanear)</option>
-                      <option value="supervisor">Supervisor (Escanear + Notas + Zonas)</option>
-                      <option value="admin">Admin (Total + Excel + Precios)</option>
-                      {/* Agregado para poder crear otros MasterAdmins si es necesario */}
-                      <option value="masteradmin">Master Admin (Control Total)</option>
-                  </select>
-                </div>
-                <button onClick={handleCreateUser} style={{...styles.button, width:'100%', fontSize:'0.8rem'}}>CREAR USUARIO</button>
+              <div style={{...styles.card, border:'1px solid #bfdbfe', backgroundColor:'#f0f9ff'}}>
+                <button 
+                    onClick={() => setExpandUsers(!expandUsers)} 
+                    style={{...styles.accordionBtn, background:'white', border:'1px solid #bfdbfe'}}
+                >
+                    <span style={{color:'#0369a1', display:'flex', alignItems:'center', gap:'10px'}}>👥 Gestión de Usuarios</span>
+                    <span>{expandUsers ? '▲' : '▼'}</span>
+                </button>
+                
+                {expandUsers && (
+                    <div style={{paddingTop: '15px'}}>
+                        <div style={{display:'flex', gap:'10px', marginBottom:'15px', flexDirection: 'column'}}>
+                          <div style={{display:'flex', gap:'10px'}}>
+                              <input style={{...styles.input, flex:2}} placeholder="Nombre" value={newUser.name} onChange={e=>setNewUser({...newUser, name:e.target.value})} />
+                              {/* PIN SEGURO: Type Password */}
+                              <input style={{...styles.input, flex:1}} type="password" placeholder="PIN (6+)" value={newUser.pin} onChange={e=>setNewUser({...newUser, pin:e.target.value})} />
+                          </div>
+                          <select style={styles.select} value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})}>
+                              <option value="checker">Checador (Solo Escanear)</option>
+                              <option value="supervisor">Supervisor (Escanear + Notas + Zonas)</option>
+                              <option value="admin">Admin (Total + Excel + Precios)</option>
+                              <option value="masteradmin">Master Admin (Control Total)</option>
+                          </select>
+                        </div>
+                        <button onClick={handleCreateUser} style={{...styles.button, width:'100%', fontSize:'0.85rem'}}>CREAR USUARIO</button>
 
-                {/* LISTA USUARIOS */}
-                <div style={{marginTop:'10px', borderTop:'1px solid #bfdbfe', paddingTop:'10px'}}>
-                  {users.map(u => (
-                    <div key={u.id} style={{display:'flex', justifyContent:'space-between', padding:'5px 0', fontSize:'0.9rem'}}>
-                      <span>{u.name} ({u.role}) - PIN: {u.pin}</span>
-                      <button onClick={()=>deleteItem('system_users', u.id)} style={{border:'none', background:'none', color:'red', cursor:'pointer'}}>×</button>
+                        <div style={{marginTop:'20px', borderTop:'1px solid #bfdbfe', paddingTop:'15px'}}>
+                          {users.map(u => (
+                            <div key={u.id} style={{display:'flex', justifyContent:'space-between', padding:'10px 0', fontSize:'0.9rem', borderBottom:'1px dashed #cbd5e1'}}>
+                              {/* PIN OCULTO EN LISTA */}
+                              <span style={{fontWeight:'500'}}>{u.name} <span style={{fontSize:'0.75rem', background:'#e0f2fe', color:'#0369a1', padding:'2px 6px', borderRadius:'4px'}}>{u.role}</span></span>
+                              <button onClick={()=>deleteItem('system_users', u.id)} style={{border:'none', background:'#fef2f2', color:'#ef4444', borderRadius:'6px', padding:'4px 8px', cursor:'pointer'}}>Eliminar</button>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{marginTop:'25px', borderTop:'2px solid #fecaca', paddingTop:'15px'}}>
+                           <button onClick={handleWipeData} style={{...styles.button, backgroundColor:'#dc2626', fontSize:'0.8rem'}}>⚠️ LIMPIAR BASE DE DATOS</button>
+                        </div>
                     </div>
-                  ))}
-                </div>
-                <div style={{marginTop:'20px', borderTop:'2px solid #fca5a5', paddingTop:'10px'}}>
-                   <button onClick={handleWipeData} style={{...styles.button, backgroundColor:'#dc2626'}}>⚠️ LIMPIAR BASE DE DATOS</button>
-                </div>
+                )}
               </div>
             )}
 
             {currentAuth.isAuthenticated && (
               <>
                 <div style={{...styles.card, opacity: isSupervisorOrHigher ? 1 : 0.8}}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                     <h3>Zonas / Bancos</h3>
-                     {!isSupervisorOrHigher && <span style={{fontSize:'0.7rem', color:'gray'}}>Solo Lectura</span>}
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px'}}>
+                     <h3 style={{margin:0}}>📍 Zonas / Bancos</h3>
+                     {!isSupervisorOrHigher && <span style={{fontSize:'0.7rem', background:'#f1f5f9', padding:'4px 8px', borderRadius:'4px'}}>Solo Lectura</span>}
                   </div>
-                  {/* SOLO ADMIN Y SUPERVISOR PUEDEN AGREGAR ZONAS */}
                   {isSupervisorOrHigher && (
-                      <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
-                        <input style={{...styles.input, flex:2}} placeholder="Nombre" value={newLocation.name} onChange={e=>setNewLocation({...newLocation, name:e.target.value})} />
-                        <input style={{...styles.input, flex:1}} placeholder="CC" value={newLocation.cc} onChange={e=>setNewLocation({...newLocation, cc:e.target.value})} />
-                        <button onClick={handleAddLocation} style={{...styles.button, width:'auto'}}>+</button>
+                      <div style={{display:'flex', gap:'10px', marginBottom:'15px'}}>
+                        <input style={{...styles.input, flex:2}} placeholder="Nombre Zona" value={newLocation.name} onChange={e=>setNewLocation({...newLocation, name:e.target.value})} />
+                        <input style={{...styles.input, flex:1}} placeholder="C.C." value={newLocation.cc} onChange={e=>setNewLocation({...newLocation, cc:e.target.value})} />
+                        <button onClick={handleAddLocation} style={{...styles.button, width:'auto', padding:'0 20px'}}>+</button>
                       </div>
                   )}
-                  {locations.map(l => <div key={l.id} style={{display:'flex', justifyContent:'space-between', padding:'10px', borderBottom:'1px solid #eee'}}><span>{l.name}</span> {isAdminOrMaster && <button onClick={()=>deleteItem('locations', l.id)} style={{background:'none', border:'none', color:'red'}}>🗑️</button>}</div>)}
+                  <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+                    {locations.map(l => (
+                        <div key={l.id} style={styles.rowCard}>
+                            <span style={{fontWeight:'600'}}>{l.name} <span style={{fontSize:'0.75rem', color:'#64748b'}}>({l.cc || 'S/N'})</span></span> 
+                            {isAdminOrMaster && <button onClick={()=>deleteItem('locations', l.id)} style={{background:'none', border:'none', color:'#ef4444', cursor:'pointer'}}><Icons.Trash/></button>}
+                        </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div style={{...styles.card}}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                    <h3>Camiones</h3>
-                    {!isAdminOrMaster && <span style={{fontSize:'0.7rem', color:'red'}}>Solo Lectura (Admin/Master)</span>}
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '15px'}}>
+                    <h3 style={{margin:0}}>🚛 Flotilla</h3>
+                    {!isAdminOrMaster && <span style={{fontSize:'0.7rem', background:'#f1f5f9', padding:'4px 8px', borderRadius:'4px'}}>Solo Lectura</span>}
                   </div>
                   
                   {isAdminOrMaster && (
-                    <div style={{marginBottom:'10px', paddingBottom:'10px', borderBottom:'1px solid #eee'}}>
-                      <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
-                        <input style={{...styles.input, textTransform:'uppercase'}} placeholder="Placas" value={newTruck.placas} onChange={e=>setNewTruck({...newTruck, placas:e.target.value})} />
-                        <input style={{...styles.input, type:'number', placeholder:'M3'}} value={newTruck.capacidad} onChange={e=>setNewTruck({...newTruck, capacidad:e.target.value})} />
-                      </div>
-                      <input style={{...styles.input, marginBottom:'10px'}} placeholder="Sindicato" value={newTruck.agrupacion} onChange={e=>setNewTruck({...newTruck, agrupacion:e.target.value})} />
-                      <button onClick={handleAddTruck} style={styles.button}>GUARDAR</button>
+                    <div style={{marginBottom:'15px'}}>
+                        {/* MENÚ DESPLEGABLE: AGREGAR CAMIÓN */}
+                        <button 
+                            onClick={() => setExpandAddTruck(!expandAddTruck)} 
+                            style={{...styles.accordionBtn, backgroundColor: '#f0fdf4', color: '#166534', border:'1px solid #bbf7d0'}}
+                        >
+                            <span>➕ Agregar Nuevo Camión</span>
+                            <span>{expandAddTruck ? '▲' : '▼'}</span>
+                        </button>
+
+                        {expandAddTruck && (
+                            <div style={{padding: '20px', border: '1px solid #bbf7d0', borderRadius: '16px', marginTop: '10px', background:'#f0fdf4'}}>
+                                <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
+                                    <input style={{...styles.input, textTransform:'uppercase'}} placeholder="PLACAS" value={newTruck.placas} onChange={e=>setNewTruck({...newTruck, placas:e.target.value})} />
+                                    <input style={{...styles.input, type:'number', placeholder:'Capacidad (m3)'}} value={newTruck.capacidad} onChange={e=>setNewTruck({...newTruck, capacidad:e.target.value})} />
+                                </div>
+                                <input style={{...styles.input, marginBottom:'15px'}} placeholder="Proveedor / Sindicato" value={newTruck.agrupacion} onChange={e=>setNewTruck({...newTruck, agrupacion:e.target.value})} />
+                                <button onClick={handleAddTruck} style={{...styles.button, background:'#16a34a'}}>GUARDAR CAMIÓN</button>
+                            </div>
+                        )}
                     </div>
                   )}
                   
-                  <div style={{marginTop:'10px', maxHeight: '300px', overflowY: 'auto'}}>
-                    {trucks.map(t => (
-                      <div key={t.id} style={{display:'flex', justifyContent:'space-between', padding:'10px', borderBottom:'1px solid #eee'}}>
-                        <div><b>{t.placas}</b> ({t.capacidad}m³)</div>
-                        <div style={{display:'flex', gap:'10px'}}>
-                           <button onClick={()=>setShowQRModal(t)} style={{background:'none', border:'none'}}>🏁</button>
-                           {isAdminOrMaster && <button onClick={()=>deleteItem('trucks', t.id)} style={{background:'none', border:'none', color:'red'}}>🗑️</button>}
-                        </div>
+                  {/* MENÚ DESPLEGABLE: LISTA CAMIONES */}
+                  <button 
+                        onClick={() => setExpandTruckList(!expandTruckList)} 
+                        style={styles.accordionBtn}
+                    >
+                        <span>📋 Ver Lista de Camiones ({trucks.length})</span>
+                        <span>{expandTruckList ? '▲' : '▼'}</span>
+                  </button>
+
+                  {expandTruckList && (
+                      <div style={{marginTop:'10px', maxHeight: '400px', overflowY: 'auto'}}>
+                        {trucks.map(t => (
+                          <div key={t.id} style={styles.rowCard}>
+                            <div>
+                                <div style={{fontWeight:'800', fontSize:'1rem'}}>{t.placas}</div>
+                                <div style={{fontSize:'0.8rem', color:'#64748b'}}>{t.capacidad} m³ • {t.agrupacion}</div>
+                            </div>
+                            <div style={{display:'flex', gap:'15px'}}>
+                               <button onClick={()=>setShowQRModal(t)} style={{background:'white', border:'1px solid #cbd5e1', borderRadius:'8px', width:'36px', height:'36px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer'}}>🏁</button>
+                               {isAdminOrMaster && <button onClick={()=>deleteItem('trucks', t.id)} style={{background:'#fef2f2', border:'none', color:'#ef4444', borderRadius:'8px', width:'36px', height:'36px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer'}}><Icons.Trash/></button>}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                  )}
                 </div>
               </>
             )}
@@ -1151,7 +1298,7 @@ export default function App() {
       {showQRModal && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContentOficio}>
-             <button onClick={()=>setShowQRModal(null)} style={{...styles.closeBtn, top:'10px', right:'10px'}} className="no-print">×</button>
+             <button onClick={()=>setShowQRModal(null)} style={{...styles.closeBtn, top:'20px', right:'20px'}} className="no-print">×</button>
              
              <div id="print-oficio" className="oficio-container">
                 <div className="oficio-header">
@@ -1211,9 +1358,9 @@ export default function App() {
                 </div>
              </div>
 
-             <div style={{textAlign:'center', marginTop:'20px', display:'flex', justifyContent:'center', gap:'10px'}} className="no-print">
-                <button onClick={()=>setShowQRModal(null)} style={{...styles.button, width:'200px', fontSize:'1.1rem', backgroundColor:'#ef4444'}}>CERRAR</button>
-                <button onClick={()=>window.print()} style={{...styles.button, width:'200px', fontSize:'1.1rem'}}>🖨️ IMPRIMIR OFICIO</button>
+             <div style={{textAlign:'center', marginTop:'30px', display:'flex', justifyContent:'center', gap:'15px'}} className="no-print">
+                <button onClick={()=>setShowQRModal(null)} style={{...styles.button, width:'200px', fontSize:'1rem', backgroundColor:'#ef4444'}}>CERRAR</button>
+                <button onClick={()=>window.print()} style={{...styles.button, width:'200px', fontSize:'1rem'}}>🖨️ IMPRIMIR</button>
              </div>
           </div>
         </div>
@@ -1221,22 +1368,22 @@ export default function App() {
       {scanSuccess && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
-            <div style={{fontSize:'4rem'}}>✅</div>
-            <h2>¡REGISTRADO!</h2>
-            <p><b>{scanSuccess.truck.placas}</b> en <b>{scanSuccess.location.name}</b></p>
-            <button onClick={()=>setScanSuccess(null)} style={styles.button}>CONTINUAR</button>
+            <div style={{fontSize:'5rem', marginBottom:'10px'}}>✅</div>
+            <h2 style={{margin:'0 0 10px 0', color:'#166534'}}>¡REGISTRADO!</h2>
+            <p style={{fontSize:'1.2rem', margin:'0 0 25px 0', color:'#334155'}}><b>{scanSuccess.truck.placas}</b><br/><span style={{fontSize:'0.9rem', color:'#64748b'}}>en {scanSuccess.location.name}</span></p>
+            <button onClick={()=>setScanSuccess(null)} style={{...styles.button, background:'#16a34a', boxShadow:'0 10px 20px -5px rgba(22, 163, 74, 0.4)'}}>CONTINUAR</button>
           </div>
         </div>
       )}
 
-      <footer className="no-print" style={{textAlign:'center', padding:'20px', color:'#cbd5e1', fontSize:'0.7rem'}}>
-        <p>Derechos del programa propiedad intelectual y dueño:<br/><b>Ing. Eduardo Lopez Garcia</b></p>
+      <footer className="no-print" style={{textAlign:'center', padding:'30px 20px', color:'#94a3b8', fontSize:'0.75rem'}}>
+        <p>Control De Obra Pro &copy; 2025<br/>Desarrollado por <b>Ing. Eduardo Lopez Garcia</b></p>
       </footer>
 
       <nav style={styles.nav} className="no-print">
-        <button onClick={()=>handleTabChange('dashboard')} style={styles.navBtn}><Icons.List/>REPORTE</button>
+        <button onClick={()=>handleTabChange('dashboard')} style={{...styles.navBtn, color: activeTab==='dashboard' ? '#2563eb' : '#94a3b8'}}><Icons.List/>REPORTE</button>
         <button onClick={()=>handleTabChange('scanner')} style={styles.fab}><Icons.Camera/></button>
-        <button onClick={()=>handleTabChange('config')} style={styles.navBtn}><Icons.Truck/>CONFIG</button>
+        <button onClick={()=>handleTabChange('config')} style={{...styles.navBtn, color: activeTab==='config' ? '#2563eb' : '#94a3b8'}}><Icons.Truck/>CONFIG</button>
       </nav>
     </div>
   );
