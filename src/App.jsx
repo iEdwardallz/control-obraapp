@@ -778,7 +778,28 @@ export default function App() {
   const handleEditLog = async () => { if(!editingLog) return; try { await updateDoc(doc(db, collectionPath, "logs", editingLog.id), { noteNumber: editingLog.noteNumber, locationName: editingLog.locationName }); setEditingLog(null); } catch(e) { alert("Error: " + e.message); } };
   const handleSaveNote = async () => { await setDoc(doc(db, collectionPath, "daily_notes", selectedDate), { text: dailyNote }); alert("✅ Nota guardada"); };
   const handleAddLocation = async () => { if (!isSupervisorOrHigher) return alert("Permisos insuficientes"); if(!newLocation.name) return alert("Faltan datos"); await addDoc(collection(db, collectionPath, "locations"), newLocation); setNewLocation({ name: '', cc: '' }); };
-  const handleAddTruck = async () => { if (!isAdminOrMaster) return alert("Solo Admin/Master"); const docRef = await addDoc(collection(db, collectionPath, "trucks"), { placas: newTruck.placas.toUpperCase(), capacidad: parseFloat(newTruck.capacidad), agrupacion: newTruck.agrupacion, createdAt: serverTimestamp() }); setNewTruck({ placas: '', capacidad: '', agrupacion: '' }); setShowQRModal({ id: docRef.id, placas: newTruck.placas.toUpperCase(), capacidad: newTruck.capacidad, agrupacion: newTruck.agrupacion }); alert("Camión agregado correctamente."); };
+  
+  // FIX: Validar datos antes de guardar y corregir inputs
+  const handleAddTruck = async () => { 
+      if (!isAdminOrMaster) return alert("Solo Admin/Master"); 
+      
+      // Validación estricta
+      if (!newTruck.placas.trim() || !newTruck.capacidad || !newTruck.agrupacion.trim()) {
+          return alert("⚠️ Error: Todos los campos del camión son obligatorios (Placas, Capacidad y Proveedor).");
+      }
+
+      const docRef = await addDoc(collection(db, collectionPath, "trucks"), { 
+          placas: newTruck.placas.toUpperCase(), 
+          capacidad: parseFloat(newTruck.capacidad), 
+          agrupacion: newTruck.agrupacion, 
+          createdAt: serverTimestamp() 
+      }); 
+      
+      setNewTruck({ placas: '', capacidad: '', agrupacion: '' }); 
+      setShowQRModal({ id: docRef.id, placas: newTruck.placas.toUpperCase(), capacidad: newTruck.capacidad, agrupacion: newTruck.agrupacion }); 
+      alert("Camión agregado correctamente."); 
+  };
+
   const handleCreateUser = async () => { 
       if (!isMaster) return alert("⛔ Solo MasterAdmin."); 
       if (!newUser.name || !newUser.pin) return alert("Faltan datos"); 
@@ -1254,7 +1275,13 @@ export default function App() {
                             <div style={{padding: '20px', border: '1px solid #bbf7d0', borderRadius: '16px', marginTop: '10px', background:'#f0fdf4'}}>
                                 <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
                                     <input style={{...styles.input, textTransform:'uppercase'}} placeholder="PLACAS" value={newTruck.placas} onChange={e=>setNewTruck({...newTruck, placas:e.target.value})} />
-                                    <input style={{...styles.input, type:'number', placeholder:'Capacidad (m3)'}} value={newTruck.capacidad} onChange={e=>setNewTruck({...newTruck, capacidad:e.target.value})} />
+                                    <input 
+                                        style={styles.input} 
+                                        type="number" 
+                                        placeholder="Capacidad (m3)" 
+                                        value={newTruck.capacidad} 
+                                        onChange={e=>setNewTruck({...newTruck, capacidad:e.target.value})} 
+                                    />
                                 </div>
                                 <input style={{...styles.input, marginBottom:'15px'}} placeholder="Proveedor / Sindicato" value={newTruck.agrupacion} onChange={e=>setNewTruck({...newTruck, agrupacion:e.target.value})} />
                                 <button onClick={handleAddTruck} style={{...styles.button, background:'#16a34a'}}>GUARDAR CAMIÓN</button>
