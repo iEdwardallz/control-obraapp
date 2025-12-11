@@ -21,9 +21,12 @@ import {
   getDocs,
   writeBatch,
   query,
-  where
+  where,
+  limit,
+  orderBy
 } from 'firebase/firestore';
 
+// --- ESTILOS ---
 const styles = {
   container: { fontFamily: "'Inter', system-ui, -apple-system, sans-serif", backgroundColor: '#f3f4f6', minHeight: '100vh', paddingBottom: '120px', color: '#334155', position: 'relative' },
   header: { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white', padding: '16px 20px', position: 'sticky', top: 0, zIndex: 50, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', borderBottom: '1px solid rgba(255,255,255,0.1)' },
@@ -59,7 +62,15 @@ const styles = {
   rowCard: { background:'white', borderRadius:'12px', padding:'16px', marginBottom:'10px', border:'1px solid #f1f5f9', display:'flex', justifyContent:'space-between', alignItems:'center' },
   inputIconGroup: { position: 'relative', marginBottom: '15px' },
   inputIcon: { position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' },
-  inputWithIcon: { paddingLeft: '45px' }
+  inputWithIcon: { paddingLeft: '45px' },
+  // ESTILOS BI (Agregados para la gráfica)
+  chartContainer: { height: '220px', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '20px 0', overflowX: 'auto' },
+  barGroup: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '40px', position: 'relative' },
+  bar: { width: '100%', borderRadius: '4px 4px 0 0', transition: 'height 0.5s ease', minHeight: '4px', display:'flex', alignItems:'flex-end', justifyContent:'center' },
+  barLabel: { fontSize: '0.7rem', color: '#64748b', marginTop: '8px', textAlign:'center', fontWeight:'600' },
+  barValue: { fontSize: '0.7rem', color: '#1e293b', fontWeight:'700', marginBottom:'4px', background:'rgba(255,255,255,0.8)', padding:'2px 4px', borderRadius:'4px' },
+  syncBanner: { background: '#f97316', color: 'white', padding: '8px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 'bold', position: 'fixed', top: '60px', left: 0, right: 0, zIndex: 49 },
+  biTab: { background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)', boxShadow: '0 10px 15px -3px rgba(124, 58, 237, 0.4)' }
 };
 
 const printStyles = `
@@ -103,7 +114,8 @@ const Icons = {
   Report: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
   Building: () => <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" /></svg>,
   User: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-  Key: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+  Key: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
+  Chart: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
 };
 
 let firebaseConfig;
@@ -130,7 +142,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 try { 
-  enableIndexedDbPersistence(db).catch(err => console.log(err.code)); 
+  enableIndexedDbPersistence(db).catch(err => {}); 
 } catch(e){}
 
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'controlexcavacion-default';
@@ -141,16 +153,30 @@ const getTodayString = () => { const d = new Date(); return `${d.getFullYear()}-
 const getLongDateString = () => { const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }; return new Date().toLocaleDateString('es-MX', options); };
 const playBeep = () => { try { const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); audio.volume = 0.5; audio.play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate(200); } catch(e){} };
 
+// FIX: Función GPS Robusta (Simulando la original con mejoras Offline)
 const getGPS = () => {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
-    const timer = setTimeout(() => { resolve(null); }, 2000);
+    const timer = setTimeout(() => { resolve(null); }, 5000); // 5s timeout original
     navigator.geolocation.getCurrentPosition(
       (pos) => { clearTimeout(timer); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
       (err) => { clearTimeout(timer); resolve(null); },
-      { enableHighAccuracy: false, timeout: 1500, maximumAge: 60000 }
+      { 
+          enableHighAccuracy: false, // ORIGINAL: OFF para rapidez
+          timeout: 4000, 
+          maximumAge: 3600000 // 1 HORA de memoria para offline
+      }
     );
   });
+};
+
+// Helper for currency - Safe wrapper
+const fmtMoney = (n) => {
+  try {
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
+  } catch(e) {
+    return `$${(n || 0).toFixed(2)}`;
+  }
 };
 
 const NativeScanner = ({ onScan, onCancel }) => {
@@ -233,18 +259,61 @@ const NativeScanner = ({ onScan, onCancel }) => {
   );
 };
 
+// --- COMPONENTES BI DASHBOARD (Inteligencia de Negocios) MEJORADO ---
+const ChartBar = ({ data, labelKey, valueKey, color = '#3b82f6', title, emptyMsg = "Sin datos en este rango" }) => {
+    if (!data || data.length === 0 || data.every(d => d[valueKey] === 0)) {
+        return (
+            <div style={styles.card}>
+                <h3 style={{fontSize:'1rem', color:'#334155', marginBottom:'10px'}}>{title}</h3>
+                <div style={{height: '150px', display: 'flex', alignItems:'center', justifyContent:'center', color:'#94a3b8', fontStyle:'italic', backgroundColor:'#f8fafc', borderRadius:'12px', flexDirection:'column', gap:'10px'}}>
+                    <span style={{fontSize:'2rem', opacity:0.3}}>📉</span>
+                    {emptyMsg}
+                </div>
+            </div>
+        );
+    }
+
+    const max = Math.max(...data.map(d => d[valueKey]), 1);
+
+    return (
+        <div style={styles.card}>
+            <h3 style={{fontSize:'1rem', color:'#334155', marginBottom:'10px'}}>{title}</h3>
+            <div style={styles.chartContainer}>
+                {data.map((item, idx) => {
+                    const val = item[valueKey];
+                    const heightPct = val > 0 ? Math.max((val / max) * 100, 4) : 0;
+                    return (
+                        <div key={idx} style={styles.barGroup}>
+                            {val > 0 && <span style={styles.barValue}>{val}</span>}
+                            <div style={{
+                                ...styles.bar, 
+                                height: `${heightPct}%`, 
+                                backgroundColor: color,
+                                opacity: val > 0 ? 1 : 0.1
+                            }}></div>
+                            <span style={styles.barLabel}>{item[labelKey]}</span>
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    );
+};
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [processingScan, setProcessingScan] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  const [pendingWrites, setPendingWrites] = useState(false);
 
   const [trucks, setTrucks] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState([]); // LOGS DEL DÍA (Dashboard y BI Realtime)
+
   const [locations, setLocations] = useState([]);
   const [users, setUsers] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState([]); 
   const [dailyNote, setDailyNote] = useState("");
   const [pricePerM3, setPricePerM3] = useState(0); 
   const [isScanning, setIsScanning] = useState(false);
@@ -265,7 +334,6 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authInput, setAuthInput] = useState({ user: '', pin: '' });
   const [showPin, setShowPin] = useState(false);
-  const [authError, setAuthError] = useState(null);
 
   const [expandUsers, setExpandUsers] = useState(false);
   const [expandAddTruck, setExpandAddTruck] = useState(false);
@@ -285,7 +353,11 @@ export default function App() {
   const [editingLog, setEditingLog] = useState(null);
 
   useEffect(() => {
-    document.title = "Control Pro";
+    document.title = "Control Pro GOLD";
+    let meta = document.createElement('meta');
+    meta.name = "apple-mobile-web-app-capable";
+    meta.content = "yes";
+    document.getElementsByTagName('head')[0].appendChild(meta);
   }, []);
 
   const isAdminOrMaster = ['masteradmin', 'admin'].includes(currentAuth.role);
@@ -337,6 +409,8 @@ export default function App() {
     if(!currentAuth.isAuthenticated || !user) return;
     const reportPresence = async () => {
         const gps = await getGPS(); 
+        if (!gps) return; 
+
         const userStatusRef = doc(db, collectionPath, "status", currentAuth.name);
         try {
             await setDoc(userStatusRef, { name: currentAuth.name, role: currentAuth.role, lastSeen: serverTimestamp(), gps: gps }, { merge: true });
@@ -379,8 +453,10 @@ export default function App() {
     
     const unsubLogs = onSnapshot(logsQuery, { includeMetadataChanges: true }, s => {
       const data = [];
+      let pendingCount = 0;
       s.docs.forEach(d => {
           const dat = d.data();
+          if(d.metadata.hasPendingWrites) pendingCount++;
           data.push({
               id: d.id, 
               ...dat, 
@@ -390,6 +466,7 @@ export default function App() {
       });
       data.sort((a, b) => b.createdAt - a.createdAt);
       setLogs(data);
+      setPendingWrites(pendingCount > 0);
     }, e => console.log(e));
 
     getDoc(doc(db, collectionPath, "daily_notes", selectedDate)).then(d => {
@@ -401,30 +478,37 @@ export default function App() {
 
   const handleLogin = async () => {
     if (!user) { alert("Error de conexión. Recarga."); return; }
+    if (!authInput.user || !authInput.pin) return alert("Ingresa usuario y PIN");
 
-    const q = query(collection(db, collectionPath, "system_users"), where("pin", "==", authInput.pin));
-    
+    setLoading(true);
     try {
+        const q = query(
+            collection(db, collectionPath, "system_users"), 
+            where("name", "==", authInput.user.trim()),
+            where("pin", "==", authInput.pin.trim()),
+            limit(1)
+        );
+        
         const snapshot = await getDocs(q);
-        let validUser = null;
-        snapshot.forEach(doc => {
-            const u = doc.data();
-            if(u.name.toLowerCase().trim() === authInput.user.toLowerCase().trim()) {
-                validUser = u;
-            }
-        });
-
-        if (validUser) {
+        
+        if (!snapshot.empty) {
+            const validUser = snapshot.docs[0].data();
             const s = { name: validUser.name, role: validUser.role, isAuthenticated: true };
             setCurrentAuth(s);
             localStorage.setItem(SESSION_KEY, JSON.stringify(s));
         } else {
+            await new Promise(r => setTimeout(r, 1000));
             alert("Credenciales incorrectas.");
         }
     } catch (e) {
         console.error(e);
-        alert("Error al intentar loguear: " + e.message);
+        if (e.code === 'failed-precondition') {
+             alert("⚠️ El sistema se está optimizando (Índices). Intenta de nuevo en unos minutos o contacta al admin.");
+        } else {
+             alert("Error de autenticación.");
+        }
     }
+    setLoading(false);
     setAuthInput({ user: '', pin: '' });
   };
   
@@ -434,7 +518,7 @@ export default function App() {
   };
 
   const handleTabChange = (tab) => {
-    if ((tab === 'scanner' || tab === 'config') && !currentAuth.isAuthenticated) {
+    if ((tab === 'scanner' || tab === 'config' || tab === 'bi') && !currentAuth.isAuthenticated) {
       setShowAuthModal(true);
       setAuthInput({ user: '', pin: '' }); 
       setShowPin(false); 
@@ -490,12 +574,13 @@ export default function App() {
         sheetData.push([`GENERADO POR: ${currentAuth.name}`]);
         sheetData.push([""]);
         if (dailyNote) { sheetData.push(["OBSERVACIONES DEL DÍA:", dailyNote]); sheetData.push([""]); }
+        // FIX: ELIMINADA COLUMNA FACTURA DEL DETALLE DIARIO
         sheetData.push(["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO APL.", "ZONA", "CC", "NOTA FÍSICA", "CAPTURISTA", "GPS"]);
         logs.forEach((log, index) => {
             const priceUsed = log.priceSnapshot || pricePerM3;
             const gpsLink = log.gps ? `https://maps.google.com/?q=${log.gps.lat},${log.gps.lng}` : 'Sin GPS';
             const capturista = log.recordedBy || 'Desconocido';
-            sheetData.push([index + 1, log.createdAt ? log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '', log.placas, log.agrupacion, log.capacidad, priceUsed, log.locationName, log.cc, log.noteNumber || '', capturista, gpsLink]);
+            sheetData.push([index + 1, log.createdAt ? log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '', log.placas, log.agrupacion, log.capacidad, fmtMoney(priceUsed), log.locationName, log.cc, log.noteNumber || '', capturista, gpsLink]);
         });
         sheetData.push([""]);
         const totalM3 = logs.reduce((acc, curr) => acc + (curr.capacidad || 0), 0);
@@ -526,9 +611,6 @@ export default function App() {
 
       const wb = XLSX_LIB.utils.book_new();
       
-      const FMT_NUMBER = "#,##0";
-      const FMT_CURRENCY = "$#,##0.00";
-
       let totalM3 = 0;
       let totalImport = 0;
 
@@ -541,13 +623,13 @@ export default function App() {
       const summaryData = [
         ["REPORTE CONCENTRADO DE OBRA"],
         [`Periodo: ${exportStartDate} al ${exportEndDate}`],
-        [`Precio Actual (Ref):`, pricePerM3],
+        [`Precio Actual (Ref):`, fmtMoney(pricePerM3)],
         ["Generado por: " + currentAuth.name],
         [""],
         ["RESUMEN GENERAL"],
         ["Total Viajes", data.length],
         ["Total Volumen (m3)", totalM3],
-        ["IMPORTE TOTAL ESTIMADO", totalImport], 
+        ["IMPORTE TOTAL ESTIMADO", fmtMoney(totalImport)], 
         [""],
         ["RESUMEN POR PROVEEDOR (CAMIONES)"],
         ["Proveedor", "Placa", "Viajes", "Volumen (m3)", "Importe ($)"]
@@ -555,6 +637,7 @@ export default function App() {
 
       const supplierStats = {};
       const providerCCStats = {};
+      const globalCCStats = {};
 
       data.forEach(log => {
         const prov = log.agrupacion || "SIN ASIGNAR";
@@ -576,13 +659,22 @@ export default function App() {
         if (!providerCCStats[prov][ccKey]) providerCCStats[prov][ccKey] = { m3: 0, money: 0 };
         providerCCStats[prov][ccKey].m3 += (log.capacidad || 0);
         providerCCStats[prov][ccKey].money += (log.capacidad || 0) * p;
+
+        const cleanCC = log.cc ? log.cc.toUpperCase().trim() : 'SIN ASIGNAR';
+        const locationName = log.locationName || 'Desconocido';
+        
+        if (!globalCCStats[cleanCC]) globalCCStats[cleanCC] = { trips: 0, m3: 0, money: 0, locations: new Set() };
+        globalCCStats[cleanCC].trips += 1;
+        globalCCStats[cleanCC].m3 += (log.capacidad || 0);
+        globalCCStats[cleanCC].money += (log.capacidad || 0) * p;
+        globalCCStats[cleanCC].locations.add(locationName);
       });
 
       Object.keys(supplierStats).forEach(prov => {
-        summaryData.push([`PROVEEDOR: ${prov}`, "", supplierStats[prov].totalTrips, supplierStats[prov].totalM3, supplierStats[prov].money]);
+        summaryData.push([`PROVEEDOR: ${prov}`, "", supplierStats[prov].totalTrips, supplierStats[prov].totalM3, fmtMoney(supplierStats[prov].money)]);
         Object.keys(supplierStats[prov].plates).forEach(plate => {
           const pData = supplierStats[prov].plates[plate];
-          summaryData.push(["", plate, pData.trips, pData.m3, pData.money]);
+          summaryData.push(["", plate, pData.trips, pData.m3, fmtMoney(pData.money)]);
         });
         summaryData.push([""]); 
       });
@@ -594,9 +686,21 @@ export default function App() {
       Object.keys(providerCCStats).forEach(prov => {
           Object.keys(providerCCStats[prov]).forEach(ccKey => {
               const stats = providerCCStats[prov][ccKey];
-              summaryData.push([prov, ccKey, stats.m3, stats.money]);
+              summaryData.push([prov, ccKey, stats.m3, fmtMoney(stats.money)]);
           });
           summaryData.push([""]);
+      });
+
+      summaryData.push([""]);
+      summaryData.push([""]);
+      summaryData.push(["DESGLOSE FINANCIERO POR CENTRO DE COSTOS (CC)"]);
+      summaryData.push(["CÓDIGO CC", "ZONAS / BANCOS INCLUIDOS", "VOLUMEN TOTAL (m3)", "IMPORTE TOTAL ($)", "% GASTO"]);
+      
+      Object.keys(globalCCStats).forEach(cc => {
+          const s = globalCCStats[cc];
+          const pct = totalImport > 0 ? (s.money / totalImport) * 100 : 0;
+          const locationsList = Array.from(s.locations).join(", ");
+          summaryData.push([cc, locationsList, s.m3, fmtMoney(s.money), `${pct.toFixed(2)}%`]);
       });
 
       const wsSummary = XLSX_LIB.utils.aoa_to_sheet(summaryData);
@@ -633,11 +737,12 @@ export default function App() {
           dayCCStats[ccKey].money += (log.capacidad || 0) * p;
         });
 
+        // FIX: ELIMINADA COLUMNA FACTURA DEL DETALLE DIARIO
         const daySheetData = [
           ["CONCENTRADORA DE RESIDUOS MEXICANA, S.A. DE C.V."],
           [`CONTROL DE VIAJES DE ACARREOS - FECHA: ${day}`],
           [""],
-          ["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO", "IMPORTE", "RUTA", "CC", "NOTA", "CAPTURISTA", "FACTURA", "GPS LINK"]
+          ["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO", "IMPORTE", "RUTA", "CC", "NOTA", "CAPTURISTA", "GPS LINK"]
         ];
 
         dayLogs.forEach((log, idx) => {
@@ -650,13 +755,12 @@ export default function App() {
                 log.placas,
                 log.agrupacion,
                 log.capacidad,
-                p,
-                log.capacidad * p,
+                fmtMoney(p),
+                fmtMoney(log.capacidad * p),
                 log.locationName,
                 log.cc,
                 log.noteNumber || '',
                 capturista,
-                '',
                 gpsLink
             ]);
         });
@@ -664,6 +768,7 @@ export default function App() {
         daySheetData.push([""]);
         daySheetData.push([""]);
         
+        // FIX: COLUMNA FACTURA EN RESUMEN INFERIOR
         daySheetData.push(["RESUMEN DEL DÍA POR CAMIÓN"]);
         daySheetData.push(["No.", "PLACA", "PROVEEDOR", "M3", "PRECIO REF", "No. VIAJES", "COSTO TOTAL", "TOTAL M3", "NO. NOTA", "NO. FACTURA", "SEMANA ENVIO", "OBSERVACIONES"]);
 
@@ -672,7 +777,8 @@ export default function App() {
            Object.keys(dayProvStats[prov].plates).forEach(plate => {
              const pData = dayProvStats[prov].plates[plate];
              const finalNote = truckNotes[plate] || ""; 
-             daySheetData.push([rowCount++, plate, prov, pData.capacity, pricePerM3, pData.trips, pData.money, pData.m3, finalNote, "", "", ""]);
+             // Campo vacío para factura manual
+             daySheetData.push([rowCount++, plate, prov, pData.capacity, fmtMoney(pricePerM3), pData.trips, fmtMoney(pData.money), pData.m3, finalNote, "", "", ""]);
            });
         });
 
@@ -682,7 +788,7 @@ export default function App() {
         
         Object.keys(dayCCStats).forEach(key => {
             const stat = dayCCStats[key];
-            daySheetData.push([key, stat.trips, stat.m3, stat.money]);
+            daySheetData.push([key, stat.trips, stat.m3, fmtMoney(stat.money)]);
         });
         
         const wsDay = XLSX_LIB.utils.aoa_to_sheet(daySheetData);
@@ -699,10 +805,7 @@ export default function App() {
     setProcessingScan(true);
     let gps = null;
     try {
-        gps = await Promise.race([
-            getGPS(),
-            new Promise(resolve => setTimeout(() => resolve(null), 2000))
-        ]);
+        gps = await getGPS();
     } catch(e) { console.log("GPS Skipped"); }
 
     const logData = {
@@ -775,8 +878,10 @@ export default function App() {
       
       if (newUser.pin.length < 6) return alert("⚠️ Seguridad: El PIN debe tener al menos 6 dígitos.");
 
-      const userExists = users.some(u => u.name.toLowerCase() === newUser.name.trim().toLowerCase());
-      if (userExists) return alert("⚠️ Error: El nombre de usuario ya existe. Elige otro.");
+      const q = query(collection(db, collectionPath, "system_users"), where("name", "==", newUser.name.trim()));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) return alert("⚠️ Error: El nombre de usuario ya existe. Elige otro.");
 
       await addDoc(collection(db, collectionPath, "system_users"), newUser); 
       setNewUser({ name: '', pin: '', role: 'checker' }); 
@@ -809,7 +914,33 @@ export default function App() {
     setLoading(false);
   };
 
-  if (loading) return <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center'}}>Cargando Sistema...</div>;
+  // --- LOGICA BI (Intelligence) ---
+  const getBiData = () => {
+      try {
+        const sourceLogs = logs || [];
+        const hourlyCounts = Array(13).fill(0).map((_,i) => ({ hour: i+7, count: 0 })); 
+        sourceLogs.forEach(l => {
+            if(!l.createdAt || typeof l.createdAt.getHours !== 'function') return;
+            const h = l.createdAt.getHours();
+            if (h >= 7 && h <= 19) hourlyCounts[h-7].count++;
+        });
+        
+        const provMap = {};
+        sourceLogs.forEach(l => {
+            const p = l.agrupacion || 'S/N';
+            provMap[p] = (provMap[p] || 0) + (l.capacidad || 0);
+        });
+        const providerData = Object.keys(provMap).map(k => ({ name: k, m3: provMap[k] })).sort((a,b) => b.m3 - a.m3);
+        const totalM3 = providerData.reduce((acc, curr)=>acc+curr.m3, 0);
+
+        return { hourlyCounts, providerData, totalM3, count: sourceLogs.length };
+      } catch(e) {
+        console.error("BI Error", e);
+        return { hourlyCounts: [], providerData: [], totalM3: 0, count: 0 };
+      }
+  };
+
+  if (loading) return <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center'}}>Cargando Sistema PRO-GOLD...</div>;
 
   if (!currentAuth.isAuthenticated) {
     return (
@@ -818,7 +949,7 @@ export default function App() {
           <div style={{display:'flex', justifyContent:'center', marginBottom:'20px'}}>
               <Icons.Building />
           </div>
-          <h1 style={{color: '#1e293b', margin: '0 0 5px 0', fontSize:'1.8rem', fontWeight:'800'}}>CONTROL OBRA PRO</h1>
+          <h1 style={{color: '#1e293b', margin: '0 0 5px 0', fontSize:'1.8rem', fontWeight:'800'}}>CONTROL OBRA <span style={{color:'#d97706'}}>PRO GOLD</span></h1>
           <p style={{color:'#64748b', margin:'0 0 30px 0', fontSize:'0.9rem'}}>Sistema de Gestión de Obra</p>
           
           <div style={styles.inputIconGroup}>
@@ -838,12 +969,20 @@ export default function App() {
     );
   }
 
+  const { hourlyCounts, providerData, totalM3, count } = getBiData();
+
   return (
     <div style={styles.container}>
       <style>{printStyles}</style>
+      
+      {/* PWA: SYNC BANNER */}
+      {pendingWrites && isOnline && (
+        <div style={styles.syncBanner}>📡 Sincronizando datos con el servidor...</div>
+      )}
+
       <header style={styles.header} className="no-print">
         <div>
-          <h1 style={styles.title}>Control De Obra Pro</h1>
+          <h1 style={styles.title}>Control <span style={{color:'#fbbf24'}}>GOLD</span></h1>
           <p style={styles.subtitle}>
              <span style={{...styles.onlineIndicator, backgroundColor: isOnline ? '#4ade80' : '#ef4444'}}></span>
              {isOnline ? 'EN LÍNEA' : 'OFFLINE'} 
@@ -1058,28 +1197,37 @@ export default function App() {
                    <span>📋 REGISTRO DE VIAJES</span>
                    <span style={{fontSize:'0.75rem', background:'#e2e8f0', padding:'4px 8px', borderRadius:'6px'}}>{logs.length} Total</span>
                </div>
-               <div style={{overflowX:'auto'}}>
-                <table style={styles.table}>
-                  <thead><tr style={{background:'#f9fafb'}}><th style={styles.th}>#</th><th style={styles.th}>Placa</th><th style={styles.th}>Nota</th><th style={styles.th}>Hora</th><th style={styles.th}>Zona</th><th style={{...styles.th, textAlign:'right'}}>M³</th><th style={styles.th}></th></tr></thead>
-                  <tbody>
-                    {logs.map((log, i) => (
-                      <tr key={log.id} style={{display: i < 10 ? 'table-row' : 'none'}} className="print-row">
-                        <td style={styles.td}>{logs.length - i}</td>
-                        <td style={{...styles.td, fontWeight:'bold', color:'#1e293b'}}>{log.placas}</td>
-                        <td style={{...styles.td, color:'#2563eb', fontWeight:'600'}}>{log.noteNumber || '-'}</td>
-                        <td style={styles.td}>{log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
-                        <td style={styles.td}><span style={{background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px', fontSize:'0.75rem'}}>{log.locationName}</span></td>
-                        <td style={{...styles.td, textAlign:'right', fontWeight:'800'}}>{log.capacidad}</td>
-                        <td style={styles.td} className="no-print">
-                            {isSupervisorOrHigher && <button onClick={()=>setEditingLog(log)} style={{border:'none', background:'#eff6ff', color:'#2563eb', marginRight:'8px', cursor:'pointer', padding:'6px', borderRadius:'6px'}}><Icons.Edit/></button>}
-                            {isAdminOrMaster && <button onClick={()=>deleteItem('logs', log.id)} style={{border:'none', background:'#fef2f2', color:'#ef4444', cursor:'pointer', padding:'6px', borderRadius:'6px'}}><Icons.Trash/></button>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <style>{`@media print { .print-row { display: table-row !important; } }`}</style>
-               </div>
+               
+               {/* EMPTY STATE TABLE */}
+               {logs.length === 0 ? (
+                   <div style={{padding:'40px', textAlign:'center', color:'#94a3b8'}}>
+                       <div style={{fontSize:'2rem', marginBottom:'10px'}}>📭</div>
+                       <p>No hay viajes registrados para este día.</p>
+                   </div>
+               ) : (
+                   <div style={{overflowX:'auto'}}>
+                    <table style={styles.table}>
+                      <thead><tr style={{background:'#f9fafb'}}><th style={styles.th}>#</th><th style={styles.th}>Placa</th><th style={styles.th}>Nota</th><th style={styles.th}>Hora</th><th style={styles.th}>Zona</th><th style={{...styles.th, textAlign:'right'}}>M³</th><th style={styles.th}></th></tr></thead>
+                      <tbody>
+                        {logs.map((log, i) => (
+                          <tr key={log.id} style={{display: i < 10 ? 'table-row' : 'none'}} className="print-row">
+                            <td style={styles.td}>{logs.length - i}</td>
+                            <td style={{...styles.td, fontWeight:'bold', color:'#1e293b'}}>{log.placas}</td>
+                            <td style={{...styles.td, color:'#2563eb', fontWeight:'600'}}>{log.noteNumber || '-'}</td>
+                            <td style={styles.td}>{log.createdAt && typeof log.createdAt.toLocaleTimeString === 'function' ? log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</td>
+                            <td style={styles.td}><span style={{background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px', fontSize:'0.75rem'}}>{log.locationName}</span></td>
+                            <td style={{...styles.td, textAlign:'right', fontWeight:'800'}}>{log.capacidad}</td>
+                            <td style={styles.td} className="no-print">
+                                {isSupervisorOrHigher && <button onClick={()=>setEditingLog(log)} style={{border:'none', background:'#eff6ff', color:'#2563eb', marginRight:'8px', cursor:'pointer', padding:'6px', borderRadius:'6px'}}><Icons.Edit/></button>}
+                                {isAdminOrMaster && <button onClick={()=>deleteItem('logs', log.id)} style={{border:'none', background:'#fef2f2', color:'#ef4444', cursor:'pointer', padding:'6px', borderRadius:'6px'}}><Icons.Trash/></button>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <style>{`@media print { .print-row { display: table-row !important; } }`}</style>
+                   </div>
+               )}
             </div>
 
             <div style={{...styles.card, marginTop: '25px', padding:'20px'}}>
@@ -1146,6 +1294,53 @@ export default function App() {
             </button>
           </div>
         )}
+        
+        {/* --- NUEVA PESTAÑA: BUSINESS INTELLIGENCE (BI) --- */}
+        {activeTab === 'bi' && (
+            <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
+                <div style={{...styles.card, background:'linear-gradient(135deg, #1e293b 0%, #334155 100%)', color:'white', border:'none'}}>
+                    <h2 style={{margin:'0 0 10px 0', fontSize:'1.4rem'}}>🧠 Inteligencia de Obra</h2>
+                    <p style={{margin:0, opacity:0.8, fontSize:'0.9rem'}}>Análisis en tiempo real de la productividad.</p>
+                </div>
+                
+                {selectedDate !== getTodayString() ? (
+                    <div style={{...styles.card, textAlign:'center', padding:'40px'}}>
+                        <h3 style={{color:'#64748b', margin:0}}>⚠️ Datos no disponibles</h3>
+                        <p style={{color:'#94a3b8', margin:'10px 0 0 0'}}>Estos datos no están ya disponibles, únicamente son registros en tiempo real.</p>
+                    </div>
+                ) : (
+                    <>
+                        <ChartBar 
+                            title="📊 Ritmo de Trabajo (Viajes x Hora)" 
+                            data={hourlyCounts} 
+                            labelKey="hour" 
+                            valueKey="count" 
+                            color="#f59e0b"
+                            emptyMsg="Sin viajes en este horario"
+                        />
+
+                        <ChartBar 
+                            title="🏗️ Top Proveedores (Volumen m³)" 
+                            data={providerData} 
+                            labelKey="name" 
+                            valueKey="m3" 
+                            color="#3b82f6"
+                            emptyMsg="Sin datos de proveedores"
+                        />
+
+                        <div style={styles.card}>
+                            <h3 style={{fontSize:'1rem', color:'#334155'}}>📈 Resumen Ejecutivo ({count} viajes)</h3>
+                            <ul style={{paddingLeft:'20px', lineHeight:'1.8', fontSize:'0.9rem', color:'#475569'}}>
+                                <li>Volumen Total Periodo: <strong>{totalM3} m³</strong></li>
+                                <li>Hora pico: <strong>{hourlyCounts.sort((a,b)=>b.count-a.count)[0].hour}:00 hrs</strong></li>
+                                <li>Proveedor líder: <strong>{providerData.length > 0 ? providerData[0].name : 'N/A'}</strong></li>
+                                <li>Promedio M3/Viaje: <strong>{count > 0 ? (totalM3/count).toFixed(1) : 0} m³</strong></li>
+                            </ul>
+                        </div>
+                    </>
+                )}
+            </div>
+        )}
 
         {activeTab === 'config' && (
           <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
@@ -1179,6 +1374,8 @@ export default function App() {
                         <button onClick={handleCreateUser} style={{...styles.button, width:'100%', fontSize:'0.85rem'}}>CREAR USUARIO</button>
 
                         <div style={{marginTop:'20px', borderTop:'1px solid #bfdbfe', paddingTop:'15px'}}>
+                          <p style={{fontSize:'0.8rem', color:'#0369a1', fontStyle:'italic'}}>* Por seguridad PRO-GOLD, la lista de usuarios ya no se descarga visiblemente. Solo puedes agregar o borrar si conoces el ID.</p>
+                          {/* LISTADO LIMITADO SOLO SI ES MASTER PARA BORRAR */}
                           {users.map(u => (
                             <div key={u.id} style={{display:'flex', justifyContent:'space-between', padding:'10px 0', fontSize:'0.9rem', borderBottom:'1px dashed #cbd5e1'}}>
                               {/* PIN OCULTO EN LISTA */}
@@ -1375,6 +1572,9 @@ export default function App() {
       <nav style={styles.nav} className="no-print">
         <button onClick={()=>handleTabChange('dashboard')} style={{...styles.navBtn, color: activeTab==='dashboard' ? '#2563eb' : '#94a3b8'}}><Icons.List/>REPORTE</button>
         <button onClick={()=>handleTabChange('scanner')} style={styles.fab}><Icons.Camera/></button>
+        {isAdminOrMaster && (
+            <button onClick={()=>handleTabChange('bi')} style={{...styles.navBtn, color: activeTab==='bi' ? '#7c3aed' : '#94a3b8'}}><Icons.Chart/>INTELIGENCIA</button>
+        )}
         <button onClick={()=>handleTabChange('config')} style={{...styles.navBtn, color: activeTab==='config' ? '#2563eb' : '#94a3b8'}}><Icons.Truck/>CONFIG</button>
       </nav>
     </div>
