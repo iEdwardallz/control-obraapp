@@ -63,6 +63,7 @@ const styles = {
   inputIconGroup: { position: 'relative', marginBottom: '15px' },
   inputIcon: { position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' },
   inputWithIcon: { paddingLeft: '45px' },
+  // ESTILOS BI (Agregados para la gráfica)
   chartContainer: { height: '220px', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '20px 0', overflowX: 'auto' },
   barGroup: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '40px', position: 'relative' },
   bar: { width: '100%', borderRadius: '4px 4px 0 0', transition: 'height 0.5s ease', minHeight: '4px', display:'flex', alignItems:'flex-end', justifyContent:'center' },
@@ -152,28 +153,18 @@ const getTodayString = () => { const d = new Date(); return `${d.getFullYear()}-
 const getLongDateString = () => { const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }; return new Date().toLocaleDateString('es-MX', options); };
 const playBeep = () => { try { const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); audio.volume = 0.5; audio.play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate(200); } catch(e){} };
 
-// FIX: Función GPS Robusta que usa CUALQUIER ubicación disponible (Caché + Timeout)
+// FIX: Función GPS Robusta (Simulando la original con mejoras Offline)
 const getGPS = () => {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
-    
-    // Timeout de 10s: Suficiente para A-GPS
-    const timer = setTimeout(() => { resolve(null); }, 10000);
-
+    const timer = setTimeout(() => { resolve(null); }, 5000); // 5s timeout original
     navigator.geolocation.getCurrentPosition(
-      (pos) => { 
-          clearTimeout(timer); 
-          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); 
-      },
-      (err) => { 
-          clearTimeout(timer); 
-          console.log("GPS Error:", err);
-          resolve(null); // Fallback silencioso a Sin GPS para no bloquear
-      },
+      (pos) => { clearTimeout(timer); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+      (err) => { clearTimeout(timer); resolve(null); },
       { 
-          enableHighAccuracy: true, // Intenta alta precisión
-          timeout: 9000, 
-          maximumAge: Infinity // IMPORTANTE: Acepta cualquier ubicación cacheada (Offline Friendly)
+          enableHighAccuracy: false, // ORIGINAL: OFF para rapidez
+          timeout: 4000, 
+          maximumAge: 3600000 // 1 HORA de memoria para offline
       }
     );
   });
@@ -270,7 +261,6 @@ const NativeScanner = ({ onScan, onCancel }) => {
 
 // --- COMPONENTES BI DASHBOARD (Inteligencia de Negocios) MEJORADO ---
 const ChartBar = ({ data, labelKey, valueKey, color = '#3b82f6', title, emptyMsg = "Sin datos en este rango" }) => {
-    // Si no hay datos, mostramos mensaje amigable
     if (!data || data.length === 0 || data.every(d => d[valueKey] === 0)) {
         return (
             <div style={styles.card}>
@@ -291,7 +281,6 @@ const ChartBar = ({ data, labelKey, valueKey, color = '#3b82f6', title, emptyMsg
             <div style={styles.chartContainer}>
                 {data.map((item, idx) => {
                     const val = item[valueKey];
-                    // Aseguramos una altura mínima de 4% para que se vea la barra aunque el valor sea pequeño
                     const heightPct = val > 0 ? Math.max((val / max) * 100, 4) : 0;
                     return (
                         <div key={idx} style={styles.barGroup}>
@@ -419,7 +408,6 @@ export default function App() {
   useEffect(() => {
     if(!currentAuth.isAuthenticated || !user) return;
     const reportPresence = async () => {
-        // GPS TRACKING: Always try, use infinite cache if needed
         const gps = await getGPS(); 
         if (!gps) return; 
 
@@ -586,6 +574,7 @@ export default function App() {
         sheetData.push([`GENERADO POR: ${currentAuth.name}`]);
         sheetData.push([""]);
         if (dailyNote) { sheetData.push(["OBSERVACIONES DEL DÍA:", dailyNote]); sheetData.push([""]); }
+        // FIX: ELIMINADA COLUMNA FACTURA DEL DETALLE DIARIO
         sheetData.push(["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO APL.", "ZONA", "CC", "NOTA FÍSICA", "CAPTURISTA", "GPS"]);
         logs.forEach((log, index) => {
             const priceUsed = log.priceSnapshot || pricePerM3;
@@ -748,11 +737,12 @@ export default function App() {
           dayCCStats[ccKey].money += (log.capacidad || 0) * p;
         });
 
+        // FIX: ELIMINADA COLUMNA FACTURA DEL DETALLE DIARIO
         const daySheetData = [
           ["CONCENTRADORA DE RESIDUOS MEXICANA, S.A. DE C.V."],
           [`CONTROL DE VIAJES DE ACARREOS - FECHA: ${day}`],
           [""],
-          ["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO", "IMPORTE", "RUTA", "CC", "NOTA", "CAPTURISTA", "FACTURA", "GPS LINK"]
+          ["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO", "IMPORTE", "RUTA", "CC", "NOTA", "CAPTURISTA", "GPS LINK"]
         ];
 
         dayLogs.forEach((log, idx) => {
@@ -771,7 +761,6 @@ export default function App() {
                 log.cc,
                 log.noteNumber || '',
                 capturista,
-                '',
                 gpsLink
             ]);
         });
@@ -779,6 +768,7 @@ export default function App() {
         daySheetData.push([""]);
         daySheetData.push([""]);
         
+        // FIX: COLUMNA FACTURA EN RESUMEN INFERIOR
         daySheetData.push(["RESUMEN DEL DÍA POR CAMIÓN"]);
         daySheetData.push(["No.", "PLACA", "PROVEEDOR", "M3", "PRECIO REF", "No. VIAJES", "COSTO TOTAL", "TOTAL M3", "NO. NOTA", "NO. FACTURA", "SEMANA ENVIO", "OBSERVACIONES"]);
 
@@ -787,6 +777,7 @@ export default function App() {
            Object.keys(dayProvStats[prov].plates).forEach(plate => {
              const pData = dayProvStats[prov].plates[plate];
              const finalNote = truckNotes[plate] || ""; 
+             // Campo vacío para factura manual
              daySheetData.push([rowCount++, plate, prov, pData.capacity, fmtMoney(pricePerM3), pData.trips, fmtMoney(pData.money), pData.m3, finalNote, "", "", ""]);
            });
         });
