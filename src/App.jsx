@@ -152,35 +152,29 @@ const getTodayString = () => { const d = new Date(); return `${d.getFullYear()}-
 const getLongDateString = () => { const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }; return new Date().toLocaleDateString('es-MX', options); };
 const playBeep = () => { try { const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); audio.volume = 0.5; audio.play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate(200); } catch(e){} };
 
-// FIX: Función GPS Robusta Offline (Caché Extendido + Sin Bloqueo)
+// FIX: Función GPS Robusta que usa CUALQUIER ubicación disponible (Caché + Timeout)
 const getGPS = () => {
   return new Promise((resolve) => {
-    // Si no hay soporte, regresamos null de inmediato
-    if (!navigator.geolocation) {
-        resolve(null);
-        return;
-    }
-
-    // Timeout de 10s: Suficiente para A-GPS, no tan largo para desesperar
+    if (!navigator.geolocation) return resolve(null);
+    
+    // Timeout de 10s: Suficiente para A-GPS
     const timer = setTimeout(() => { resolve(null); }, 10000);
 
     navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            clearTimeout(timer);
-            resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        },
-        (err) => {
-            clearTimeout(timer);
-            console.log("GPS no disponible:", err.message);
-            // IMPORTANTE: Devolvemos null para que el registro se guarde SIN GPS
-            // en lugar de bloquear la app con un error.
-            resolve(null);
-        },
-        { 
-            enableHighAccuracy: false, // OFF: Más rápido y funciona mejor con señal débil
-            timeout: 9000, 
-            maximumAge: 1800000 // 30 minutos de antigüedad (Ideal para obras sin señal constante)
-        }
+      (pos) => { 
+          clearTimeout(timer); 
+          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); 
+      },
+      (err) => { 
+          clearTimeout(timer); 
+          console.log("GPS Error:", err);
+          resolve(null); // Fallback silencioso a Sin GPS para no bloquear
+      },
+      { 
+          enableHighAccuracy: true, // Intenta alta precisión
+          timeout: 9000, 
+          maximumAge: Infinity // IMPORTANTE: Acepta cualquier ubicación cacheada (Offline Friendly)
+      }
     );
   });
 };
@@ -425,7 +419,7 @@ export default function App() {
   useEffect(() => {
     if(!currentAuth.isAuthenticated || !user) return;
     const reportPresence = async () => {
-        // GPS TRACKING: Intento robusto pero silencioso si falla
+        // GPS TRACKING: Always try, use infinite cache if needed
         const gps = await getGPS(); 
         if (!gps) return; 
 
@@ -1136,7 +1130,7 @@ export default function App() {
 
       <main style={styles.main}>
         {activeTab === 'dashboard' && (
-          <div>
+          <div className="no-print-padding">
             {/* KPI CARDS */}
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'15px'}} className="no-print">
               <div style={styles.kpiCard}><div style={styles.kpiValue}>{logs.length}</div><div style={styles.kpiLabel}>Viajes</div></div>
@@ -1207,7 +1201,7 @@ export default function App() {
                  </div>
             )}
 
-            <div style={{...styles.card, padding:0, overflow:'hidden', marginTop:'25px'}}>
+            <div style={{...styles.card, padding:0, overflow:'hidden', marginTop:'25px'}} className="print-only">
                <div style={{padding:'16px 20px', background:'#f8fafc', fontWeight:'800', borderBottom:'1px solid #e2e8f0', color:'#334155', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                    <span>📋 REGISTRO DE VIAJES</span>
                    <span style={{fontSize:'0.75rem', background:'#e2e8f0', padding:'4px 8px', borderRadius:'6px'}}>{logs.length} Total</span>
@@ -1581,7 +1575,7 @@ export default function App() {
       )}
 
       <footer className="no-print" style={{textAlign:'center', padding:'30px 20px', color:'#94a3b8', fontSize:'0.75rem'}}>
-        <p>Control De Obra <span style={{color:'#d97706', fontWeight:'bold'}}>PRO GOLD</span> &copy; 2025<br/>Desarrollado por <b>Ing. Eduardo Lopez Garcia</b></p>
+        <p>Control De Obra Pro &copy; 2025<br/>Desarrollado por <b>Ing. Eduardo Lopez Garcia</b></p>
       </footer>
 
       <nav style={styles.nav} className="no-print">
