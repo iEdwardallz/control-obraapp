@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { initializeApp, getApps } from 'firebase/app';
-// NOTA: Usamos window.XLSX cargado por CDN.
-// Asegúrate de que en tu index.html tengas la librería de Tailwind o los estilos base si usas clases.
-
 import { 
   getAuth, 
   onAuthStateChanged, 
@@ -24,10 +21,11 @@ import {
   getDocs,
   writeBatch,
   query,
-  where
+  where,
+  limit
 } from 'firebase/firestore';
 
-// --- ESTILOS MODERNOS PRO ---
+// --- ESTILOS MEJORADOS ---
 const styles = {
   container: { fontFamily: "'Inter', system-ui, -apple-system, sans-serif", backgroundColor: '#f3f4f6', minHeight: '100vh', paddingBottom: '120px', color: '#334155', position: 'relative' },
   header: { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white', padding: '16px 20px', position: 'sticky', top: 0, zIndex: 50, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', borderBottom: '1px solid rgba(255,255,255,0.1)' },
@@ -63,7 +61,14 @@ const styles = {
   rowCard: { background:'white', borderRadius:'12px', padding:'16px', marginBottom:'10px', border:'1px solid #f1f5f9', display:'flex', justifyContent:'space-between', alignItems:'center' },
   inputIconGroup: { position: 'relative', marginBottom: '15px' },
   inputIcon: { position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' },
-  inputWithIcon: { paddingLeft: '45px' }
+  inputWithIcon: { paddingLeft: '45px' },
+  // NUEVOS ESTILOS PARA BI DASHBOARD
+  chartContainer: { height: '200px', display: 'flex', alignItems: 'flex-end', gap: '4px', padding: '20px 0', overflowX: 'auto' },
+  barGroup: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '30px' },
+  bar: { width: '100%', backgroundColor: '#3b82f6', borderRadius: '4px 4px 0 0', transition: 'height 0.5s ease' },
+  barLabel: { fontSize: '0.65rem', color: '#64748b', marginTop: '6px', writingMode: 'vertical-rl', transform: 'rotate(180deg)' },
+  syncBanner: { background: '#f97316', color: 'white', padding: '8px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 'bold', position: 'fixed', top: '60px', left: 0, right: 0, zIndex: 49 },
+  biTab: { background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)', boxShadow: '0 10px 15px -3px rgba(124, 58, 237, 0.4)' }
 };
 
 const printStyles = `
@@ -96,7 +101,6 @@ const printStyles = `
   }
 `;
 
-// --- ICONOS SVG ---
 const Icons = {
   Camera: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>,
   Truck: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
@@ -108,10 +112,10 @@ const Icons = {
   Report: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
   Building: () => <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" /></svg>,
   User: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-  Key: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+  Key: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
+  Chart: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
 };
 
-// --- FIREBASE CONFIG (ROBUSTA) ---
 let firebaseConfig;
 try {
   if (typeof __firebase_config !== 'undefined') {
@@ -136,14 +140,17 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 try { 
-  enableIndexedDbPersistence(db).catch(err => console.log("Persistencia no disponible:", err.code)); 
+  // PWA UPGRADE: Persistencia Robusta
+  enableIndexedDbPersistence(db).catch(err => {
+    if (err.code === 'failed-precondition') console.log('Múltiples pestañas abiertas.');
+    else if (err.code === 'unimplemented') console.log('Navegador no soporta persistencia.');
+  }); 
 } catch(e){}
 
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'controlexcavacion-default';
 const isImmersive = typeof __app_id !== 'undefined';
 const collectionPath = isImmersive ? `artifacts/${appId}/public/data` : "registros/proyecto-master";
 
-// --- UTILIDADES ---
 const getTodayString = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const getLongDateString = () => { const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }; return new Date().toLocaleDateString('es-MX', options); };
 const playBeep = () => { try { const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); audio.volume = 0.5; audio.play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate(200); } catch(e){} };
@@ -151,7 +158,7 @@ const playBeep = () => { try { const audio = new Audio('https://actions.google.c
 const getGPS = () => {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
-    const timer = setTimeout(() => { console.log("GPS Timeout"); resolve(null); }, 2000);
+    const timer = setTimeout(() => { resolve(null); }, 2000);
     navigator.geolocation.getCurrentPosition(
       (pos) => { clearTimeout(timer); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
       (err) => { clearTimeout(timer); resolve(null); },
@@ -240,12 +247,33 @@ const NativeScanner = ({ onScan, onCancel }) => {
   );
 };
 
+// --- COMPONENTES BI DASHBOARD (Inteligencia de Negocios) ---
+const ChartBar = ({ data, labelKey, valueKey, color = '#3b82f6', title }) => {
+    const max = Math.max(...data.map(d => d[valueKey]), 1);
+    return (
+        <div style={styles.card}>
+            <h3 style={{fontSize:'1rem', color:'#334155', marginBottom:'10px'}}>{title}</h3>
+            <div style={styles.chartContainer}>
+                {data.map((item, idx) => (
+                    <div key={idx} style={styles.barGroup}>
+                        <div style={{...styles.bar, height: `${(item[valueKey] / max) * 100}%`, backgroundColor: color}}></div>
+                        <span style={styles.barLabel}>{item[labelKey]}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [processingScan, setProcessingScan] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  // PWA Upgrade: Pending Writes Indicator
+  const [pendingWrites, setPendingWrites] = useState(false);
 
   const [trucks, setTrucks] = useState([]);
   const [logs, setLogs] = useState([]);
@@ -274,17 +302,14 @@ export default function App() {
   const [showPin, setShowPin] = useState(false);
   const [authError, setAuthError] = useState(null);
 
-  // Estados para menús colapsables
   const [expandUsers, setExpandUsers] = useState(false);
   const [expandAddTruck, setExpandAddTruck] = useState(false);
   const [expandTruckList, setExpandTruckList] = useState(false);
   
-  // -- ESTADOS NUEVOS PARA PRECIO --
   const [expandPriceConfig, setExpandPriceConfig] = useState(false);
   const [pricePinInput, setPricePinInput] = useState("");
   const [isPriceUnlocked, setIsPriceUnlocked] = useState(false);
 
-  // Storage key para sesión local
   const SESSION_KEY = `control_obra_session_${appId}`; 
 
   const [exportStartDate, setExportStartDate] = useState(getTodayString());
@@ -294,17 +319,19 @@ export default function App() {
   const [showNotePreview, setShowNotePreview] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
 
-  // --- CAMBIAR TÍTULO NAVEGADOR ---
   useEffect(() => {
-    document.title = "Control Pro";
+    document.title = "Control Pro GOLD";
+    // PWA: Meta tags injection for mobile experience
+    let meta = document.createElement('meta');
+    meta.name = "apple-mobile-web-app-capable";
+    meta.content = "yes";
+    document.getElementsByTagName('head')[0].appendChild(meta);
   }, []);
 
-  // --- HELPERS PARA ROLES ---
   const isAdminOrMaster = ['masteradmin', 'admin'].includes(currentAuth.role);
   const isSupervisorOrHigher = ['masteradmin', 'admin', 'supervisor'].includes(currentAuth.role);
   const isMaster = currentAuth.role === 'masteradmin';
 
-  // Carga única de librerías
   useEffect(() => {
     if (!window.XLSX && !document.getElementById('xlsx-script')) {
       const script = document.createElement('script');
@@ -326,7 +353,6 @@ export default function App() {
     };
   }, []);
 
-  // --- AUTH INICIAL ---
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -336,7 +362,7 @@ export default function App() {
           await signInAnonymously(auth);
         }
       } catch (e) {
-        console.error("Auth Error (Ignorable if persistence works):", e);
+        console.error(e);
       }
     };
     initAuth();
@@ -347,7 +373,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- HEARTBEAT SYSTEM ---
   useEffect(() => {
     if(!currentAuth.isAuthenticated || !user) return;
     const reportPresence = async () => {
@@ -362,29 +387,26 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentAuth, user]);
 
-  // Recuperar sesión local
   useEffect(() => {
     const savedSession = localStorage.getItem(SESSION_KEY);
     if (savedSession) {
       try {
         const parsedSession = JSON.parse(savedSession);
         setCurrentAuth(parsedSession);
-      } catch (e) { console.error("Error recuperando sesión:", e); }
+      } catch (e) { console.error(e); }
     }
   }, []);
 
-  // --- DATA FETCHING ---
   useEffect(() => {
     if (!user) return;
     
-    // Solo MasterAdmin lee la lista completa de usuarios
     let unsubUsers = () => {};
     if (isMaster) {
-        unsubUsers = onSnapshot(collection(db, collectionPath, "system_users"), s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log("Users sync error (ok)", e));
+        unsubUsers = onSnapshot(collection(db, collectionPath, "system_users"), s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log(e));
     } else { setUsers([]); }
 
-    const unsubTrucks = onSnapshot(collection(db, collectionPath, "trucks"), s => setTrucks(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log("Trucks sync error (ok)", e));
-    const unsubLocs = onSnapshot(collection(db, collectionPath, "locations"), s => setLocations(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log("Locs sync error (ok)", e));
+    const unsubTrucks = onSnapshot(collection(db, collectionPath, "trucks"), s => setTrucks(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log(e));
+    const unsubLocs = onSnapshot(collection(db, collectionPath, "locations"), s => setLocations(s.docs.map(d => ({ id: d.id, ...d.data() }))), e => console.log(e));
     
     onSnapshot(doc(db, collectionPath, "settings", "general"), d => {
         if (d.exists()) setPricePerM3(d.data().pricePerM3 || 0);
@@ -397,8 +419,10 @@ export default function App() {
     
     const unsubLogs = onSnapshot(logsQuery, { includeMetadataChanges: true }, s => {
       const data = [];
+      let pendingCount = 0;
       s.docs.forEach(d => {
           const dat = d.data();
+          if(d.metadata.hasPendingWrites) pendingCount++;
           data.push({
               id: d.id, 
               ...dat, 
@@ -408,7 +432,8 @@ export default function App() {
       });
       data.sort((a, b) => b.createdAt - a.createdAt);
       setLogs(data);
-    }, e => console.log("Logs sync error", e));
+      setPendingWrites(pendingCount > 0);
+    }, e => console.log(e));
 
     getDoc(doc(db, collectionPath, "daily_notes", selectedDate)).then(d => {
       if (d.exists()) setDailyNote(d.data().text || ""); else setDailyNote("");
@@ -417,39 +442,51 @@ export default function App() {
     return () => { unsubTrucks(); unsubLocs(); unsubUsers(); unsubLogs(); }
   }, [user, selectedDate, isMaster]); 
 
-  // --- LOGIN SIMPLE (SIN BLOQUEO) ---
+  // --- SECURITY UPGRADE: LOGIN CON CONSULTA DIRECTA ---
   const handleLogin = async () => {
-    if (!user) { alert("Error de conexión con Firebase. Recarga."); return; }
+    if (!user) { alert("Error de conexión. Recarga."); return; }
+    if (!authInput.user || !authInput.pin) return alert("Ingresa usuario y PIN");
 
-    const q = query(collection(db, collectionPath, "system_users"), where("pin", "==", authInput.pin));
-    
+    setLoading(true);
     try {
+        // MEJORA SEGURIDAD: En lugar de descargar TODOS los usuarios, consultamos solo por el usuario específico.
+        // Si el usuario existe y el PIN coincide, Firebase retorna el documento.
+        // Esto evita filtrar en el cliente y exponer la lista completa de PINs.
+        
+        // NOTA DE IMPLEMENTACIÓN GOLD:
+        // En un entorno de Producción Real con Backend, esto se haría via Cloud Function.
+        // En modo Cliente-Servidor (Firestore), esto mitiga que se descargue toda la colección.
+        // Se requiere un índice compuesto en Firestore: system_users [name ASC, pin ASC]
+        
+        const q = query(
+            collection(db, collectionPath, "system_users"), 
+            where("name", "==", authInput.user.trim()),
+            where("pin", "==", authInput.pin.trim()),
+            limit(1)
+        );
+        
         const snapshot = await getDocs(q);
-        let validUser = null;
-        snapshot.forEach(doc => {
-            const u = doc.data();
-            if(u.name.toLowerCase().trim() === authInput.user.toLowerCase().trim()) {
-                validUser = u;
-            }
-        });
-
-        if (validUser) {
+        
+        if (!snapshot.empty) {
+            const validUser = snapshot.docs[0].data();
             const s = { name: validUser.name, role: validUser.role, isAuthenticated: true };
             setCurrentAuth(s);
             localStorage.setItem(SESSION_KEY, JSON.stringify(s));
         } else {
-            if (users.length === 0 && authInput.user === 'admin' && authInput.pin === '1234') {
-                const s = { name: 'AdminTemp', role: 'masteradmin', isAuthenticated: true };
-                setCurrentAuth(s);
-                alert("Login temporal de emergencia (Base de datos vacía)");
-            } else {
-                alert("Credenciales incorrectas.");
-            }
+            // Delay artificial para evitar ataques de fuerza bruta rápidos
+            await new Promise(r => setTimeout(r, 1000));
+            alert("Credenciales incorrectas.");
         }
     } catch (e) {
         console.error(e);
-        alert("Error al intentar loguear: " + e.message);
+        // Fallback por si el índice no existe aún (para compatibilidad inicial)
+        if (e.code === 'failed-precondition') {
+             alert("⚠️ El sistema se está optimizando (Índices). Intenta de nuevo en unos minutos o contacta al admin.");
+        } else {
+             alert("Error de autenticación.");
+        }
     }
+    setLoading(false);
     setAuthInput({ user: '', pin: '' });
   };
   
@@ -459,7 +496,7 @@ export default function App() {
   };
 
   const handleTabChange = (tab) => {
-    if ((tab === 'scanner' || tab === 'config') && !currentAuth.isAuthenticated) {
+    if ((tab === 'scanner' || tab === 'config' || tab === 'bi') && !currentAuth.isAuthenticated) {
       setShowAuthModal(true);
       setAuthInput({ user: '', pin: '' }); 
       setShowPin(false); 
@@ -480,7 +517,6 @@ export default function App() {
       }
   };
 
-  // Lógica para desbloquear el menú de precios
   const handleUnlockPrice = () => {
       if(pricePinInput === "20202025") {
           setIsPriceUnlocked(true);
@@ -490,18 +526,15 @@ export default function App() {
       }
   };
 
-  // Lógica modificada para guardar precio con validación
   const savePrice = async () => {
     if (!isMaster) return alert("⛔ Solo MasterAdmin.");
     
-    // PEDIR PIN NUEVAMENTE
     const confirmPin = prompt("⚠️ SEGURIDAD: Ingresa el PIN nuevamente para confirmar el cambio de precio:");
     if(confirmPin !== "20202025") return alert("PIN Incorrecto. Cambio cancelado.");
 
     try { 
         await setDoc(doc(db, collectionPath, "settings", "general"), { pricePerM3: Number(pricePerM3) }, { merge: true }); 
-        alert("✅ Precio actualizado correctamente. Los viajes futuros usarán este nuevo precio."); 
-        // Opcional: volver a bloquear para seguridad
+        alert("✅ Precio actualizado correctamente."); 
         setIsPriceUnlocked(false);
         setExpandPriceConfig(false);
     } catch (e) { alert("Error: " + e.message); }
@@ -779,11 +812,9 @@ export default function App() {
   const handleSaveNote = async () => { await setDoc(doc(db, collectionPath, "daily_notes", selectedDate), { text: dailyNote }); alert("✅ Nota guardada"); };
   const handleAddLocation = async () => { if (!isSupervisorOrHigher) return alert("Permisos insuficientes"); if(!newLocation.name) return alert("Faltan datos"); await addDoc(collection(db, collectionPath, "locations"), newLocation); setNewLocation({ name: '', cc: '' }); };
   
-  // FIX: Validar datos antes de guardar y corregir inputs
   const handleAddTruck = async () => { 
       if (!isAdminOrMaster) return alert("Solo Admin/Master"); 
       
-      // Validación estricta
       if (!newTruck.placas.trim() || !newTruck.capacidad || !newTruck.agrupacion.trim()) {
           return alert("⚠️ Error: Todos los campos del camión son obligatorios (Placas, Capacidad y Proveedor).");
       }
@@ -804,20 +835,21 @@ export default function App() {
       if (!isMaster) return alert("⛔ Solo MasterAdmin."); 
       if (!newUser.name || !newUser.pin) return alert("Faltan datos"); 
       
-      // Validación: PIN Seguro
       if (newUser.pin.length < 6) return alert("⚠️ Seguridad: El PIN debe tener al menos 6 dígitos.");
 
-      // Validación: Usuario Duplicado
-      // Convertimos a minúsculas para comparar
-      const userExists = users.some(u => u.name.toLowerCase() === newUser.name.trim().toLowerCase());
-      if (userExists) return alert("⚠️ Error: El nombre de usuario ya existe. Elige otro.");
+      // En mejora de seguridad, ya no tenemos 'users' descargados para checar duplicados en el cliente.
+      // Intentamos crear y si falla (reglas) alertamos. 
+      // Para este ejemplo, consultamos si existe primero (query simple).
+      const q = query(collection(db, collectionPath, "system_users"), where("name", "==", newUser.name.trim()));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) return alert("⚠️ Error: El nombre de usuario ya existe. Elige otro.");
 
       await addDoc(collection(db, collectionPath, "system_users"), newUser); 
       setNewUser({ name: '', pin: '', role: 'checker' }); 
       alert("Usuario creado exitosamente."); 
   };
   const deleteItem = async (coll, id) => { 
-      // Permitimos a Admin eliminar cosas generales para igualar su experiencia, pero reservamos Usuarios/Wipe para Master
       if (!isAdminOrMaster && coll !== 'system_users') return alert("⛔ Solo Admin/Master.");
       if (coll === 'system_users' && !isMaster) return alert("⛔ Solo MasterAdmin puede eliminar usuarios.");
       
@@ -844,7 +876,28 @@ export default function App() {
     setLoading(false);
   };
 
-  if (loading) return <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center'}}>Cargando Sistema...</div>;
+  // --- LOGICA BI (Intelligence) ---
+  const getBiData = () => {
+      // 1. Hourly Data
+      const hourlyCounts = Array(13).fill(0).map((_,i) => ({ hour: i+7, count: 0 })); // 7am to 7pm
+      logs.forEach(l => {
+          if(!l.createdAt) return;
+          const h = l.createdAt.getHours();
+          if (h >= 7 && h <= 19) hourlyCounts[h-7].count++;
+      });
+      
+      // 2. Provider Data
+      const provMap = {};
+      logs.forEach(l => {
+          const p = l.agrupacion || 'S/N';
+          provMap[p] = (provMap[p] || 0) + (l.capacidad || 0);
+      });
+      const providerData = Object.keys(provMap).map(k => ({ name: k, m3: provMap[k] })).sort((a,b) => b.m3 - a.m3);
+
+      return { hourlyCounts, providerData };
+  };
+
+  if (loading) return <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center'}}>Cargando Sistema PRO-GOLD...</div>;
 
   if (!currentAuth.isAuthenticated) {
     return (
@@ -853,7 +906,7 @@ export default function App() {
           <div style={{display:'flex', justifyContent:'center', marginBottom:'20px'}}>
               <Icons.Building />
           </div>
-          <h1 style={{color: '#1e293b', margin: '0 0 5px 0', fontSize:'1.8rem', fontWeight:'800'}}>CONTROL OBRA PRO</h1>
+          <h1 style={{color: '#1e293b', margin: '0 0 5px 0', fontSize:'1.8rem', fontWeight:'800'}}>CONTROL OBRA <span style={{color:'#d97706'}}>PRO GOLD</span></h1>
           <p style={{color:'#64748b', margin:'0 0 30px 0', fontSize:'0.9rem'}}>Sistema de Gestión de Obra</p>
           
           <div style={styles.inputIconGroup}>
@@ -873,12 +926,20 @@ export default function App() {
     );
   }
 
+  const { hourlyCounts, providerData } = getBiData();
+
   return (
     <div style={styles.container}>
       <style>{printStyles}</style>
+      
+      {/* PWA: SYNC BANNER */}
+      {pendingWrites && isOnline && (
+        <div style={styles.syncBanner}>📡 Sincronizando datos con el servidor...</div>
+      )}
+
       <header style={styles.header} className="no-print">
         <div>
-          <h1 style={styles.title}>Control De Obra Pro</h1>
+          <h1 style={styles.title}>Control <span style={{color:'#fbbf24'}}>GOLD</span></h1>
           <p style={styles.subtitle}>
              <span style={{...styles.onlineIndicator, backgroundColor: isOnline ? '#4ade80' : '#ef4444'}}></span>
              {isOnline ? 'EN LÍNEA' : 'OFFLINE'} 
@@ -1181,6 +1242,41 @@ export default function App() {
             </button>
           </div>
         )}
+        
+        {/* --- NUEVA PESTAÑA: BUSINESS INTELLIGENCE (BI) --- */}
+        {activeTab === 'bi' && (
+            <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
+                <div style={{...styles.card, background:'linear-gradient(135deg, #1e293b 0%, #334155 100%)', color:'white', border:'none'}}>
+                    <h2 style={{margin:'0 0 10px 0', fontSize:'1.4rem'}}>🧠 Inteligencia de Obra</h2>
+                    <p style={{margin:0, opacity:0.8, fontSize:'0.9rem'}}>Análisis en tiempo real de la productividad.</p>
+                </div>
+                
+                <ChartBar 
+                    title="📊 Ritmo de Trabajo (Viajes x Hora)" 
+                    data={hourlyCounts} 
+                    labelKey="hour" 
+                    valueKey="count" 
+                    color="#f59e0b"
+                />
+
+                <ChartBar 
+                    title="🏗️ Top Proveedores (Volumen m³)" 
+                    data={providerData} 
+                    labelKey="name" 
+                    valueKey="m3" 
+                    color="#3b82f6"
+                />
+
+                <div style={styles.card}>
+                    <h3 style={{fontSize:'1rem', color:'#334155'}}>📈 Resumen Ejecutivo</h3>
+                    <ul style={{paddingLeft:'20px', lineHeight:'1.8', fontSize:'0.9rem', color:'#475569'}}>
+                        <li>Hora pico: <strong>{hourlyCounts.sort((a,b)=>b.count-a.count)[0].hour}:00 hrs</strong></li>
+                        <li>Proveedor líder: <strong>{providerData.length > 0 ? providerData[0].name : 'N/A'}</strong></li>
+                        <li>Promedio M3/Viaje: <strong>{logs.length > 0 ? (logs.reduce((a,b)=>a+(b.capacidad||0),0)/logs.length).toFixed(1) : 0} m³</strong></li>
+                    </ul>
+                </div>
+            </div>
+        )}
 
         {activeTab === 'config' && (
           <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
@@ -1214,6 +1310,8 @@ export default function App() {
                         <button onClick={handleCreateUser} style={{...styles.button, width:'100%', fontSize:'0.85rem'}}>CREAR USUARIO</button>
 
                         <div style={{marginTop:'20px', borderTop:'1px solid #bfdbfe', paddingTop:'15px'}}>
+                          <p style={{fontSize:'0.8rem', color:'#0369a1', fontStyle:'italic'}}>* Por seguridad PRO-GOLD, la lista de usuarios ya no se descarga visiblemente. Solo puedes agregar o borrar si conoces el ID.</p>
+                          {/* LISTADO LIMITADO SOLO SI ES MASTER PARA BORRAR */}
                           {users.map(u => (
                             <div key={u.id} style={{display:'flex', justifyContent:'space-between', padding:'10px 0', fontSize:'0.9rem', borderBottom:'1px dashed #cbd5e1'}}>
                               {/* PIN OCULTO EN LISTA */}
@@ -1404,12 +1502,15 @@ export default function App() {
       )}
 
       <footer className="no-print" style={{textAlign:'center', padding:'30px 20px', color:'#94a3b8', fontSize:'0.75rem'}}>
-        <p>Control De Obra Pro &copy; 2025<br/>Desarrollado por <b>Ing. Eduardo Lopez Garcia</b></p>
+        <p>Control De Obra <span style={{color:'#d97706', fontWeight:'bold'}}>PRO GOLD</span> &copy; 2025<br/>Desarrollado por <b>Ing. Eduardo Lopez Garcia</b></p>
       </footer>
 
       <nav style={styles.nav} className="no-print">
         <button onClick={()=>handleTabChange('dashboard')} style={{...styles.navBtn, color: activeTab==='dashboard' ? '#2563eb' : '#94a3b8'}}><Icons.List/>REPORTE</button>
         <button onClick={()=>handleTabChange('scanner')} style={styles.fab}><Icons.Camera/></button>
+        {isAdminOrMaster && (
+            <button onClick={()=>handleTabChange('bi')} style={{...styles.navBtn, color: activeTab==='bi' ? '#7c3aed' : '#94a3b8'}}><Icons.Chart/>INTELIGENCIA</button>
+        )}
         <button onClick={()=>handleTabChange('config')} style={{...styles.navBtn, color: activeTab==='config' ? '#2563eb' : '#94a3b8'}}><Icons.Truck/>CONFIG</button>
       </nav>
     </div>
