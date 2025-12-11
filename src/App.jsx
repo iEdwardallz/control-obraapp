@@ -63,7 +63,6 @@ const styles = {
   inputIconGroup: { position: 'relative', marginBottom: '15px' },
   inputIcon: { position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' },
   inputWithIcon: { paddingLeft: '45px' },
-  // NUEVOS ESTILOS PARA BI DASHBOARD
   chartContainer: { height: '220px', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '20px 0', overflowX: 'auto' },
   barGroup: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '40px', position: 'relative' },
   bar: { width: '100%', borderRadius: '4px 4px 0 0', transition: 'height 0.5s ease', minHeight: '4px', display:'flex', alignItems:'flex-end', justifyContent:'center' },
@@ -153,22 +152,36 @@ const getTodayString = () => { const d = new Date(); return `${d.getFullYear()}-
 const getLongDateString = () => { const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }; return new Date().toLocaleDateString('es-MX', options); };
 const playBeep = () => { try { const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); audio.volume = 0.5; audio.play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate(200); } catch(e){} };
 
-// FIX: Función GPS Robusta que NO bloquea
-// Si tarda más de 4s, devuelve null y deja pasar el registro
+// FIX: Función GPS Robusta que funciona Offline (Caché + Timeout Largo)
 const getGPS = () => {
-  if (!navigator.geolocation) return Promise.resolve(null);
-  
-  const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 4000));
-  
-  const positionPromise = new Promise((resolve) => {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+        resolve(null);
+        return;
+    }
+
+    // Safety timeout: 15 segundos para dar tiempo en zonas con mala señal
+    const safetyTimeout = setTimeout(() => {
+        resolve(null);
+    }, 15000);
+
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => resolve(null),
-      { enableHighAccuracy: true, timeout: 3500, maximumAge: 60000 }
+        (pos) => {
+            clearTimeout(safetyTimeout);
+            resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => {
+            clearTimeout(safetyTimeout);
+            console.log("GPS Error/Timeout", err);
+            resolve(null);
+        },
+        { 
+            enableHighAccuracy: true, 
+            timeout: 14000,     // 14s para intentar obtener señal fresca
+            maximumAge: 600000  // 10 minutos de antigüedad permitida (CRÍTICO PARA OFFLINE)
+        }
     );
   });
-
-  return Promise.race([positionPromise, timeoutPromise]);
 };
 
 // Helper for currency
@@ -409,10 +422,10 @@ export default function App() {
   useEffect(() => {
     if(!currentAuth.isAuthenticated || !user) return;
     const reportPresence = async () => {
-        // FIX: Evitar llamada GPS si no hay internet para no bloquear el hilo
-        if (!navigator.onLine) return; 
-        
+        // GPS TRACKING: Always try, even offline (will use cache)
         const gps = await getGPS(); 
+        if (!gps) return; // Silent fail if no GPS after timeout
+
         const userStatusRef = doc(db, collectionPath, "status", currentAuth.name);
         try {
             await setDoc(userStatusRef, { name: currentAuth.name, role: currentAuth.role, lastSeen: serverTimestamp(), gps: gps }, { merge: true });
@@ -1123,443 +1136,6 @@ export default function App() {
                   <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
               </div>
           </div>
-      )}
-
-      <main style={styles.main}>
-        {activeTab === 'dashboard' && (
-          <div className="no-print-padding">
-            {/* KPI CARDS */}
-            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'15px'}} className="no-print">
-              <div style={styles.kpiCard}><div style={styles.kpiValue}>{logs.length}</div><div style={styles.kpiLabel}>Viajes</div></div>
-              <div style={{...styles.kpiCard, background:'linear-gradient(145deg, #059669, #047857)'}}><div style={styles.kpiValue}>{logs.reduce((a,c)=>a+(c.capacidad||0),0)}</div><div style={styles.kpiLabel}>M³ Total</div></div>
-              <div style={{...styles.kpiCard, background:'linear-gradient(145deg, #7c3aed, #6d28d9)'}}><div style={styles.kpiValue}>{[...new Set(logs.map(l=>l.placas))].length}</div><div style={styles.kpiLabel}>Camiones</div></div>
-            </div>
-
-            {isAdminOrMaster && (
-              <div style={{...styles.card, marginTop: '25px', border: '1px solid #bfdbfe', background:'#eff6ff'}} className="no-print">
-                <h3 style={{margin:'0 0 15px 0', fontSize:'1rem', color:'#1e40af', display:'flex', alignItems:'center', gap:'8px'}}>
-                    <Icons.Report/> Reporte y Finanzas
-                </h3>
-                
-                {/* CONFIGURAR PRECIO (SOLO MASTER) */}
-                {isMaster && (
-                    <div style={{marginBottom:'15px', paddingBottom:'15px', borderBottom:'1px solid #dbeafe'}}>
-                        <button 
-                            onClick={() => setExpandPriceConfig(!expandPriceConfig)} 
-                            style={{...styles.accordionBtn, background:'white', border:'1px solid #bfdbfe'}}
-                        >
-                            <span style={{color:'#1e40af'}}>💰 Configurar Precio Base (Master)</span>
-                            <span>{expandPriceConfig ? '▲' : '▼'}</span>
-                        </button>
-
-                        {expandPriceConfig && (
-                            <div style={{padding:'15px', marginTop:'10px', backgroundColor:'white', borderRadius:'12px', border:'1px solid #bfdbfe'}}>
-                                {!isPriceUnlocked ? (
-                                    <div style={{display:'flex', gap:'10px'}}>
-                                        <input 
-                                            type="password" 
-                                            placeholder="PIN de Seguridad" 
-                                            value={pricePinInput} 
-                                            onChange={e=>setPricePinInput(e.target.value)} 
-                                            style={{...styles.input, padding:'10px'}} 
-                                        />
-                                        <button onClick={handleUnlockPrice} style={{...styles.button, width:'auto', fontSize:'0.8rem', padding:'0 20px'}}>Desbloquear</button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <label style={{fontSize:'0.8rem', fontWeight:'700', color:'#1e40af', display:'block', marginBottom:'8px'}}>Precio por m³ ($):</label>
-                                        <div style={{display:'flex', gap:'10px'}}>
-                                            <input type="number" value={pricePerM3} onChange={e=>setPricePerM3(e.target.value)} style={{...styles.input, padding:'10px'}} />
-                                            <button onClick={savePrice} style={{...styles.button, width:'auto', fontSize:'0.8rem', backgroundColor: '#15803d', padding:'0 20px'}}>Guardar</button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div style={{display:'flex', gap:'10px', alignItems:'center', flexWrap:'wrap'}}>
-                  <div style={{flex:1}}><span style={{fontSize:'0.75rem', fontWeight:'bold', color:'#64748b'}}>DESDE:</span><input type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)} style={{...styles.input, padding:'8px'}} /></div>
-                  <div style={{flex:1}}><span style={{fontSize:'0.75rem', fontWeight:'bold', color:'#64748b'}}>HASTA:</span><input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} style={{...styles.input, padding:'8px'}} /></div>
-                </div>
-                <button onClick={handleExportExcel} style={{...styles.button, marginTop:'15px', fontSize:'0.85rem', background:'white', color:'#1e40af', border:'2px solid #1e40af'}}>📥 DESCARGAR REPORTE EXCEL</button>
-              </div>
-            )}
-            
-            {/* BOTÓN DESCARGAR REPORTE DEL DÍA (SUPERVISOR/ADMIN/MASTER) */}
-            {isSupervisorOrHigher && (
-                 <div style={{...styles.card, marginTop:'20px', display:'flex', justifyContent:'space-between', alignItems:'center', background:'linear-gradient(to right, #ecfdf5, #ffffff)', borderColor:'#a7f3d0', padding:'20px'}}>
-                     <div>
-                         <h3 style={{margin:0, fontSize:'1rem', color:'#065f46'}}>📊 Reporte Diario ({selectedDate})</h3>
-                         <p style={{margin:'4px 0 0 0', fontSize:'0.75rem', color:'#059669'}}>Excel detallado de la jornada actual</p>
-                     </div>
-                     <button onClick={handleExportDailyExcel} style={{...styles.button, width:'auto', padding:'10px 20px', fontSize:'0.8rem', background:'#10b981', boxShadow:'0 4px 10px rgba(16, 185, 129, 0.3)'}}>DESCARGAR</button>
-                 </div>
-            )}
-
-            <div style={{...styles.card, padding:0, overflow:'hidden', marginTop:'25px'}}>
-               <div style={{padding:'16px 20px', background:'#f8fafc', fontWeight:'800', borderBottom:'1px solid #e2e8f0', color:'#334155', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                   <span>📋 REGISTRO DE VIAJES</span>
-                   <span style={{fontSize:'0.75rem', background:'#e2e8f0', padding:'4px 8px', borderRadius:'6px'}}>{logs.length} Total</span>
-               </div>
-               <div style={{overflowX:'auto'}}>
-                <table style={styles.table}>
-                  <thead><tr style={{background:'#f9fafb'}}><th style={styles.th}>#</th><th style={styles.th}>Placa</th><th style={styles.th}>Nota</th><th style={styles.th}>Hora</th><th style={styles.th}>Zona</th><th style={{...styles.th, textAlign:'right'}}>M³</th><th style={styles.th}></th></tr></thead>
-                  <tbody>
-                    {logs.map((log, i) => (
-                      <tr key={log.id} style={{display: i < 10 ? 'table-row' : 'none'}} className="print-row">
-                        <td style={styles.td}>{logs.length - i}</td>
-                        <td style={{...styles.td, fontWeight:'bold', color:'#1e293b'}}>{log.placas}</td>
-                        <td style={{...styles.td, color:'#2563eb', fontWeight:'600'}}>{log.noteNumber || '-'}</td>
-                        <td style={styles.td}>{log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
-                        <td style={styles.td}><span style={{background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px', fontSize:'0.75rem'}}>{log.locationName}</span></td>
-                        <td style={{...styles.td, textAlign:'right', fontWeight:'800'}}>{log.capacidad}</td>
-                        <td style={styles.td} className="no-print">
-                            {isSupervisorOrHigher && <button onClick={()=>setEditingLog(log)} style={{border:'none', background:'#eff6ff', color:'#2563eb', marginRight:'8px', cursor:'pointer', padding:'6px', borderRadius:'6px'}}><Icons.Edit/></button>}
-                            {isAdminOrMaster && <button onClick={()=>deleteItem('logs', log.id)} style={{border:'none', background:'#fef2f2', color:'#ef4444', cursor:'pointer', padding:'6px', borderRadius:'6px'}}><Icons.Trash/></button>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <style>{`@media print { .print-row { display: table-row !important; } }`}</style>
-               </div>
-            </div>
-
-            <div style={{...styles.card, marginTop: '25px', padding:'20px'}}>
-                <h3 style={{margin:'0 0 15px 0', fontSize:'1rem', color:'#64748b'}}>🚛 Flotilla Activa</h3>
-                <div style={{display:'flex', flexWrap:'wrap', gap:'10px'}}>
-                    {[...new Set(logs.map(l=>l.placas))].map(placa => (
-                        <button key={placa} onClick={() => handleTruckClick(placa)} style={{background:'white', border:'1px solid #cbd5e1', color:'#334155', padding:'8px 12px', borderRadius:'10px', fontSize:'0.85rem', fontWeight:'700', cursor:'pointer', boxShadow:'0 2px 4px rgba(0,0,0,0.05)'}}>{placa}</button>
-                    ))}
-                    {logs.length === 0 && <span style={{color:'#94a3b8', fontSize:'0.9rem', fontStyle:'italic'}}>No hay camiones registrados hoy.</span>}
-                </div>
-                {isSupervisorOrHigher && <p style={{fontSize:'0.7rem', color:'#94a3b8', marginTop:'15px', display:'flex', alignItems:'center', gap:'5px'}}><Icons.Eye/> Toca una placa para ver su Nota de Remisión</p>}
-            </div>
-
-            <div style={styles.noteBlock} className="no-print">
-              <strong style={{color:'#92400e', display:'flex', alignItems:'center', gap:'5px'}}>📝 Nota del Día:</strong>
-              <textarea style={styles.textArea} value={dailyNote} onChange={e=>setDailyNote(e.target.value)} placeholder="Escribe observaciones importantes..." />
-              <button onClick={handleSaveNote} style={{...styles.button, background:'#f59e0b', marginTop:'10px', width:'auto', fontSize:'0.8rem', padding:'10px 20px', color:'white'}}>Guardar Nota</button>
-            </div>
-          </div>
-        )}
-
-        {/* ... (RESTO DE PESTAÑAS IGUALES) ... */}
-        {activeTab === 'scanner' && (
-          <div style={{textAlign:'center', padding:'20px'}}>
-             <div style={{...styles.card, marginBottom:'25px', padding:'30px'}}>
-               <h3 style={{marginTop:0, marginBottom:'20px', color:'#1e293b'}}>📍 1. Selecciona Zona</h3>
-               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'15px'}}>
-                 {locations.map(l => (
-                    <button 
-                        key={l.id} 
-                        onClick={()=>setSelectedLocationId(l.id)} 
-                        style={{
-                            padding:'20px', 
-                            border: selectedLocationId===l.id?'2px solid #2563eb':'1px solid #e2e8f0', 
-                            borderRadius:'16px', 
-                            background: selectedLocationId===l.id?'#eff6ff':'white',
-                            color: selectedLocationId===l.id?'#1e40af':'#334155',
-                            fontWeight: '700',
-                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
-                            transition: 'all 0.2s',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        {l.name}
-                    </button>
-                 ))}
-               </div>
-             </div>
-             <button 
-                onClick={()=>{ if(!currentAuth.isAuthenticated) return setShowAuthModal(true); if(!selectedLocationId) return alert("Selecciona zona"); setIsScanning(true); }} 
-                style={{
-                    ...styles.button, 
-                    padding:'25px', 
-                    fontSize:'1.3rem', 
-                    borderRadius:'24px', 
-                    boxShadow:'0 20px 25px -5px rgba(37, 99, 235, 0.3)',
-                    display:'flex',
-                    alignItems:'center',
-                    justifyContent:'center',
-                    gap:'15px'
-                }}
-            >
-                <Icons.Camera/> ESCANEAR QR
-            </button>
-          </div>
-        )}
-        
-        {/* --- NUEVA PESTAÑA: BUSINESS INTELLIGENCE (BI) --- */}
-        {activeTab === 'bi' && (
-            <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
-                <div style={{...styles.card, background:'linear-gradient(135deg, #1e293b 0%, #334155 100%)', color:'white', border:'none'}}>
-                    <h2 style={{margin:'0 0 10px 0', fontSize:'1.4rem'}}>🧠 Inteligencia de Obra</h2>
-                    <p style={{margin:0, opacity:0.8, fontSize:'0.9rem'}}>Análisis en tiempo real de la productividad.</p>
-                </div>
-                
-                {selectedDate !== getTodayString() ? (
-                    <div style={{...styles.card, textAlign:'center', padding:'40px'}}>
-                        <h3 style={{color:'#64748b', margin:0}}>⚠️ Datos no disponibles</h3>
-                        <p style={{color:'#94a3b8', margin:'10px 0 0 0'}}>Estos datos no están ya disponibles, únicamente son registros en tiempo real.</p>
-                    </div>
-                ) : (
-                    <>
-                        <ChartBar 
-                            title="📊 Ritmo de Trabajo (Viajes x Hora)" 
-                            data={hourlyCounts} 
-                            labelKey="hour" 
-                            valueKey="count" 
-                            color="#f59e0b"
-                            emptyMsg="Sin viajes en este horario"
-                        />
-
-                        <ChartBar 
-                            title="🏗️ Top Proveedores (Volumen m³)" 
-                            data={providerData} 
-                            labelKey="name" 
-                            valueKey="m3" 
-                            color="#3b82f6"
-                            emptyMsg="Sin datos de proveedores"
-                        />
-
-                        <div style={styles.card}>
-                            <h3 style={{fontSize:'1rem', color:'#334155'}}>📈 Resumen Ejecutivo ({count} viajes)</h3>
-                            <ul style={{paddingLeft:'20px', lineHeight:'1.8', fontSize:'0.9rem', color:'#475569'}}>
-                                <li>Volumen Total Periodo: <strong>{totalM3} m³</strong></li>
-                                <li>Hora pico: <strong>{hourlyCounts.sort((a,b)=>b.count-a.count)[0].hour}:00 hrs</strong></li>
-                                <li>Proveedor líder: <strong>{providerData.length > 0 ? providerData[0].name : 'N/A'}</strong></li>
-                                <li>Promedio M3/Viaje: <strong>{count > 0 ? (totalM3/count).toFixed(1) : 0} m³</strong></li>
-                            </ul>
-                        </div>
-                    </>
-                )}
-            </div>
-        )}
-
-        {activeTab === 'config' && (
-          <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
-            
-            {/* --- GESTIÓN DE USUARIOS (MASTER) --- */}
-            {isMaster && (
-              <div style={{...styles.card, border:'1px solid #bfdbfe', backgroundColor:'#f0f9ff'}}>
-                <button 
-                    onClick={() => setExpandUsers(!expandUsers)} 
-                    style={{...styles.accordionBtn, background:'white', border:'1px solid #bfdbfe'}}
-                >
-                    <span style={{color:'#0369a1', display:'flex', alignItems:'center', gap:'10px'}}>👥 Gestión de Usuarios</span>
-                    <span>{expandUsers ? '▲' : '▼'}</span>
-                </button>
-                
-                {expandUsers && (
-                    <div style={{paddingTop: '15px'}}>
-                        <div style={{display:'flex', gap:'10px', marginBottom:'15px', flexDirection: 'column'}}>
-                          <div style={{display:'flex', gap:'10px'}}>
-                              <input style={{...styles.input, flex:2}} placeholder="Nombre" value={newUser.name} onChange={e=>setNewUser({...newUser, name:e.target.value})} />
-                              {/* PIN SEGURO: Type Password */}
-                              <input style={{...styles.input, flex:1}} type="password" placeholder="PIN (6+)" value={newUser.pin} onChange={e=>setNewUser({...newUser, pin:e.target.value})} />
-                          </div>
-                          <select style={styles.select} value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})}>
-                              <option value="checker">Checador (Solo Escanear)</option>
-                              <option value="supervisor">Supervisor (Escanear + Notas + Zonas)</option>
-                              <option value="admin">Admin (Total + Excel + Precios)</option>
-                              <option value="masteradmin">Master Admin (Control Total)</option>
-                          </select>
-                        </div>
-                        <button onClick={handleCreateUser} style={{...styles.button, width:'100%', fontSize:'0.85rem'}}>CREAR USUARIO</button>
-
-                        <div style={{marginTop:'20px', borderTop:'1px solid #bfdbfe', paddingTop:'15px'}}>
-                          <p style={{fontSize:'0.8rem', color:'#0369a1', fontStyle:'italic'}}>* Por seguridad PRO-GOLD, la lista de usuarios ya no se descarga visiblemente. Solo puedes agregar o borrar si conoces el ID.</p>
-                          {/* LISTADO LIMITADO SOLO SI ES MASTER PARA BORRAR */}
-                          {users.map(u => (
-                            <div key={u.id} style={{display:'flex', justifyContent:'space-between', padding:'10px 0', fontSize:'0.9rem', borderBottom:'1px dashed #cbd5e1'}}>
-                              {/* PIN OCULTO EN LISTA */}
-                              <span style={{fontWeight:'500'}}>{u.name} <span style={{fontSize:'0.75rem', background:'#e0f2fe', color:'#0369a1', padding:'2px 6px', borderRadius:'4px'}}>{u.role}</span></span>
-                              <button onClick={()=>deleteItem('system_users', u.id)} style={{border:'none', background:'#fef2f2', color:'#ef4444', borderRadius:'6px', padding:'4px 8px', cursor:'pointer'}}>Eliminar</button>
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{marginTop:'25px', borderTop:'2px solid #fecaca', paddingTop:'15px'}}>
-                           <button onClick={handleWipeData} style={{...styles.button, backgroundColor:'#dc2626', fontSize:'0.8rem'}}>⚠️ LIMPIAR BASE DE DATOS</button>
-                        </div>
-                    </div>
-                )}
-              </div>
-            )}
-
-            {currentAuth.isAuthenticated && (
-              <>
-                <div style={{...styles.card, opacity: isSupervisorOrHigher ? 1 : 0.8}}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px'}}>
-                     <h3 style={{margin:0}}>📍 Zonas / Bancos</h3>
-                     {!isSupervisorOrHigher && <span style={{fontSize:'0.7rem', background:'#f1f5f9', padding:'4px 8px', borderRadius:'4px'}}>Solo Lectura</span>}
-                  </div>
-                  {isSupervisorOrHigher && (
-                      <div style={{display:'flex', gap:'10px', marginBottom:'15px'}}>
-                        <input style={{...styles.input, flex:2}} placeholder="Nombre Zona" value={newLocation.name} onChange={e=>setNewLocation({...newLocation, name:e.target.value})} />
-                        <input style={{...styles.input, flex:1}} placeholder="C.C." value={newLocation.cc} onChange={e=>setNewLocation({...newLocation, cc:e.target.value})} />
-                        <button onClick={handleAddLocation} style={{...styles.button, width:'auto', padding:'0 20px'}}>+</button>
-                      </div>
-                  )}
-                  <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
-                    {locations.map(l => (
-                        <div key={l.id} style={styles.rowCard}>
-                            <span style={{fontWeight:'600'}}>{l.name} <span style={{fontSize:'0.75rem', color:'#64748b'}}>({l.cc || 'S/N'})</span></span> 
-                            {isAdminOrMaster && <button onClick={()=>deleteItem('locations', l.id)} style={{background:'none', border:'none', color:'#ef4444', cursor:'pointer'}}><Icons.Trash/></button>}
-                        </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{...styles.card}}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '15px'}}>
-                    <h3 style={{margin:0}}>🚛 Flotilla</h3>
-                    {!isAdminOrMaster && <span style={{fontSize:'0.7rem', background:'#f1f5f9', padding:'4px 8px', borderRadius:'4px'}}>Solo Lectura</span>}
-                  </div>
-                  
-                  {isAdminOrMaster && (
-                    <div style={{marginBottom:'15px'}}>
-                        {/* MENÚ DESPLEGABLE: AGREGAR CAMIÓN */}
-                        <button 
-                            onClick={() => setExpandAddTruck(!expandAddTruck)} 
-                            style={{...styles.accordionBtn, backgroundColor: '#f0fdf4', color: '#166534', border:'1px solid #bbf7d0'}}
-                        >
-                            <span>➕ Agregar Nuevo Camión</span>
-                            <span>{expandAddTruck ? '▲' : '▼'}</span>
-                        </button>
-
-                        {expandAddTruck && (
-                            <div style={{padding: '20px', border: '1px solid #bbf7d0', borderRadius: '16px', marginTop: '10px', background:'#f0fdf4'}}>
-                                <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
-                                    <input style={{...styles.input, textTransform:'uppercase'}} placeholder="PLACAS" value={newTruck.placas} onChange={e=>setNewTruck({...newTruck, placas:e.target.value})} />
-                                    <input 
-                                        style={styles.input} 
-                                        type="number" 
-                                        placeholder="Capacidad (m3)" 
-                                        value={newTruck.capacidad} 
-                                        onChange={e=>setNewTruck({...newTruck, capacidad:e.target.value})} 
-                                    />
-                                </div>
-                                <input style={{...styles.input, marginBottom:'15px'}} placeholder="Proveedor / Sindicato" value={newTruck.agrupacion} onChange={e=>setNewTruck({...newTruck, agrupacion:e.target.value})} />
-                                <button onClick={handleAddTruck} style={{...styles.button, background:'#16a34a'}}>GUARDAR CAMIÓN</button>
-                            </div>
-                        )}
-                    </div>
-                  )}
-                  
-                  {/* MENÚ DESPLEGABLE: LISTA CAMIONES */}
-                  <button 
-                        onClick={() => setExpandTruckList(!expandTruckList)} 
-                        style={styles.accordionBtn}
-                    >
-                        <span>📋 Ver Lista de Camiones ({trucks.length})</span>
-                        <span>{expandTruckList ? '▲' : '▼'}</span>
-                  </button>
-
-                  {expandTruckList && (
-                      <div style={{marginTop:'10px', maxHeight: '400px', overflowY: 'auto'}}>
-                        {trucks.map(t => (
-                          <div key={t.id} style={styles.rowCard}>
-                            <div>
-                                <div style={{fontWeight:'800', fontSize:'1rem'}}>{t.placas}</div>
-                                <div style={{fontSize:'0.8rem', color:'#64748b'}}>{t.capacidad} m³ • {t.agrupacion}</div>
-                            </div>
-                            <div style={{display:'flex', gap:'15px'}}>
-                               <button onClick={()=>setShowQRModal(t)} style={{background:'white', border:'1px solid #cbd5e1', borderRadius:'8px', width:'36px', height:'36px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer'}}>🏁</button>
-                               {isAdminOrMaster && <button onClick={()=>deleteItem('trucks', t.id)} style={{background:'#fef2f2', border:'none', color:'#ef4444', borderRadius:'8px', width:'36px', height:'36px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer'}}><Icons.Trash/></button>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </main>
-
-      {showQRModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContentOficio}>
-             <button onClick={()=>setShowQRModal(null)} style={{...styles.closeBtn, top:'20px', right:'20px'}} className="no-print">×</button>
-             
-             <div id="print-oficio" className="oficio-container">
-                <div className="oficio-header">
-                    CONSTANCIA DE ASIGNACIÓN DE CÓDIGO QR<br/>
-                    <span style={{fontSize:'10pt', fontWeight:'normal'}}>CONTROL DE ACARREOS Y VOLUMETRÍA</span>
-                </div>
-
-                <div className="oficio-date">
-                    {getLongDateString()}
-                </div>
-
-                <div className="oficio-body">
-                    <p>
-                        Por medio de la presente, se hace entrega del distintivo digital (Código QR) único e intransferible 
-                        asignado a la unidad de transporte descrita a continuación. Este código servirá como identificación 
-                        oficial dentro de la obra para el registro, conteo y validación de viajes de material.
-                    </p>
-                    <p>
-                        El portador se compromete a mantener el código visible y en buen estado, aceptando que la capacidad 
-                        cúbica asignada es la correcta según las mediciones realizadas.
-                    </p>
-                </div>
-
-                <div className="oficio-data-box">
-                    <div className="oficio-row">
-                        <span className="oficio-label">PLACAS DEL VEHÍCULO:</span>
-                        <span className="oficio-value">{showQRModal.placas}</span>
-                    </div>
-                    <div className="oficio-row">
-                        <span className="oficio-label">CAPACIDAD ASIGNADA:</span>
-                        <span className="oficio-value">{showQRModal.capacidad} m³</span>
-                    </div>
-                    <div className="oficio-row" style={{borderBottom:'none'}}>
-                        <span className="oficio-label">PROVEEDOR / SINDICATO:</span>
-                        <span className="oficio-value">{showQRModal.agrupacion}</span>
-                    </div>
-                </div>
-
-                <div className="oficio-qr-container">
-                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${showQRModal.id}`} alt="QR" className="oficio-qr-img" />
-                    {/* ID INTERNO OCULTO POR SEGURIDAD */}
-                </div>
-
-                <div className="oficio-signatures">
-                    <div className="sign-box">
-                        ENTREGA<br/><br/><br/>
-                        __________________________<br/>
-                        FIRMA Y NOMBRE<br/>
-                        (ADMINISTRACIÓN)
-                    </div>
-                    <div className="sign-box">
-                        RECIBE DE CONFORMIDAD<br/><br/><br/>
-                        __________________________<br/>
-                        FIRMA Y NOMBRE<br/>
-                        (OPERADOR / PROVEEDOR)
-                    </div>
-                </div>
-             </div>
-
-             <div style={{textAlign:'center', marginTop:'30px', display:'flex', justifyContent:'center', gap:'15px'}} className="no-print">
-                <button onClick={()=>setShowQRModal(null)} style={{...styles.button, width:'200px', fontSize:'1rem', backgroundColor:'#ef4444'}}>CERRAR</button>
-                <button onClick={()=>window.print()} style={{...styles.button, width:'200px', fontSize:'1rem'}}>🖨️ IMPRIMIR</button>
-             </div>
-          </div>
-        </div>
-      )}
-      {scanSuccess && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <div style={{fontSize:'5rem', marginBottom:'10px'}}>✅</div>
-            <h2 style={{margin:'0 0 10px 0', color:'#166534'}}>¡REGISTRADO!</h2>
-            <p style={{fontSize:'1.2rem', margin:'0 0 25px 0', color:'#334155'}}><b>{scanSuccess.truck.placas}</b><br/><span style={{fontSize:'0.9rem', color:'#64748b'}}>en {scanSuccess.location.name}</span></p>
-            <button onClick={()=>setScanSuccess(null)} style={{...styles.button, background:'#16a34a', boxShadow:'0 10px 20px -5px rgba(22, 163, 74, 0.4)'}}>CONTINUAR</button>
-          </div>
-        </div>
       )}
 
       <footer className="no-print" style={{textAlign:'center', padding:'30px 20px', color:'#94a3b8', fontSize:'0.75rem'}}>
