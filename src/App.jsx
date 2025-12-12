@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
   onAuthStateChanged, 
@@ -22,16 +22,25 @@ import {
   writeBatch,
   query,
   where,
-  limit,
-  orderBy
+  limit
 } from 'firebase/firestore';
+
+// --- CONFIGURACIÓN DE SEGURIDAD (Centralizada) ---
+const SECURITY_CONFIG = {
+  PRICE_CHANGE_PIN: "20202025",
+  WEEKLY_REPORT_PIN: "212232",
+  EJIDO_MODE_PIN: "707070", // NUEVO PIN PARA EJIDO
+  MIN_PIN_LENGTH: 6
+};
 
 // --- ESTILOS ---
 const styles = {
-  container: { fontFamily: "'Inter', system-ui, -apple-system, sans-serif", backgroundColor: '#f3f4f6', minHeight: '100vh', paddingBottom: '120px', color: '#334155', position: 'relative' },
-  header: { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white', padding: '16px 20px', position: 'sticky', top: 0, zIndex: 50, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', borderBottom: '1px solid rgba(255,255,255,0.1)' },
-  title: { fontSize: '1.25rem', fontWeight: '800', margin: 0, letterSpacing: '-0.03em', textTransform: 'uppercase', background: 'linear-gradient(to right, #ffffff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-  subtitle: { fontSize: '0.75rem', color: '#94a3b8', margin: 0, fontFamily: "'JetBrains Mono', monospace", marginTop: '2px' },
+  container: { fontFamily: "'Inter', system-ui, -apple-system, sans-serif", backgroundColor: '#f1f5f9', minHeight: '100vh', paddingBottom: '120px', color: '#334155', position: 'relative' },
+  header: { background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)', color: 'white', padding: '16px 20px', position: 'sticky', top: 0, zIndex: 50, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  // Header especial para modo Ejido
+  headerEjido: { background: 'linear-gradient(135deg, #581c87 0%, #3b0764 100%)' }, 
+  title: { fontSize: '1.25rem', fontWeight: '800', margin: 0, letterSpacing: '-0.03em', textTransform: 'uppercase', background: 'linear-gradient(to right, #ffffff, #fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
+  subtitle: { fontSize: '0.75rem', color: '#cbd5e1', margin: 0, fontFamily: "'JetBrains Mono', monospace", marginTop: '2px' },
   main: { maxWidth: '900px', margin: '0 auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
   card: { backgroundColor: 'white', borderRadius: '20px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01)' },
   kpiCard: { padding: '20px', borderRadius: '16px', color: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(145deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)' },
@@ -57,12 +66,12 @@ const styles = {
   select: { width: '100%', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', backgroundColor: '#f8fafc', marginBottom: '10px', outline: 'none' },
   bgBlueGradient: { background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' },
   onlineIndicator: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', marginRight: '8px', boxShadow: '0 0 0 2px rgba(255,255,255,0.2)' },
-  onlineBadge: { fontSize: '0.7rem', padding: '4px 8px', borderRadius: '6px', marginLeft: '5px', fontWeight: 'bold' },
   accordionBtn: { width: '100%', padding: '18px 20px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', textAlign: 'left', fontWeight: '700', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '10px', fontSize: '0.95rem', color: '#334155', transition: 'all 0.2s' },
   rowCard: { background:'white', borderRadius:'12px', padding:'16px', marginBottom:'10px', border:'1px solid #f1f5f9', display:'flex', justifyContent:'space-between', alignItems:'center' },
   inputIconGroup: { position: 'relative', marginBottom: '15px' },
   inputIcon: { position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' },
   inputWithIcon: { paddingLeft: '45px' },
+  searchBar: { width: '100%', padding: '12px 16px 12px 40px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '0.9rem', backgroundColor: 'white', marginBottom: '15px', outline:'none' },
   // ESTILOS BI (Agregados para la gráfica)
   chartContainer: { height: '220px', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '20px 0', overflowX: 'auto' },
   barGroup: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '40px', position: 'relative' },
@@ -70,7 +79,11 @@ const styles = {
   barLabel: { fontSize: '0.7rem', color: '#64748b', marginTop: '8px', textAlign:'center', fontWeight:'600' },
   barValue: { fontSize: '0.7rem', color: '#1e293b', fontWeight:'700', marginBottom:'4px', background:'rgba(255,255,255,0.8)', padding:'2px 4px', borderRadius:'4px' },
   syncBanner: { background: '#f97316', color: 'white', padding: '8px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 'bold', position: 'fixed', top: '60px', left: 0, right: 0, zIndex: 49 },
-  biTab: { background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)', boxShadow: '0 10px 15px -3px rgba(124, 58, 237, 0.4)' }
+  // Badge de Ejido
+  ejidoBadge: { backgroundColor: '#7e22ce', color:'white', fontSize:'0.7rem', padding:'2px 6px', borderRadius:'4px', fontWeight:'bold', marginLeft:'5px' },
+  tabSwitch: { display:'flex', backgroundColor:'#e2e8f0', borderRadius:'12px', padding:'4px', marginBottom:'20px' },
+  tabSwitchBtn: { flex:1, padding:'8px', textAlign:'center', borderRadius:'10px', fontSize:'0.8rem', fontWeight:'bold', cursor:'pointer', transition:'all 0.2s' },
+  tabSwitchActive: { backgroundColor:'white', color:'#1e293b', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' }
 };
 
 const printStyles = `
@@ -115,7 +128,8 @@ const Icons = {
   Building: () => <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" /></svg>,
   User: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
   Key: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
-  Chart: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+  Chart: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 };
 
 let firebaseConfig;
@@ -142,7 +156,10 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 try { 
-  enableIndexedDbPersistence(db).catch(err => {}); 
+  enableIndexedDbPersistence(db).catch(err => {
+    // Silenciar error si falla (común en iframes o modo incógnito)
+    console.log("Persistencia no disponible en este entorno");
+  }); 
 } catch(e){}
 
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'controlexcavacion-default';
@@ -153,23 +170,6 @@ const getTodayString = () => { const d = new Date(); return `${d.getFullYear()}-
 const getLongDateString = () => { const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }; return new Date().toLocaleDateString('es-MX', options); };
 const playBeep = () => { try { const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); audio.volume = 0.5; audio.play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate(200); } catch(e){} };
 
-// FIX: Función GPS Robusta (Simulando la original con mejoras Offline)
-const getGPS = () => {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    const timer = setTimeout(() => { resolve(null); }, 5000); // 5s timeout original
-    navigator.geolocation.getCurrentPosition(
-      (pos) => { clearTimeout(timer); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
-      (err) => { clearTimeout(timer); resolve(null); },
-      { 
-          enableHighAccuracy: false, // ORIGINAL: OFF para rapidez
-          timeout: 4000, 
-          maximumAge: 3600000 // 1 HORA de memoria para offline
-      }
-    );
-  });
-};
-
 // Helper for currency - Safe wrapper
 const fmtMoney = (n) => {
   try {
@@ -177,6 +177,16 @@ const fmtMoney = (n) => {
   } catch(e) {
     return `$${(n || 0).toFixed(2)}`;
   }
+};
+
+// --- LOGICA FINANCIERA BLINDADA ---
+// Obtiene el precio HISTÓRICO del viaje. Si el viaje guardó un precio (aunque sea 0), lo respeta.
+// Solo usa el precio actual si el registro es muy antiguo y no tenía el campo.
+const getLogPrice = (log, currentGlobalPrice) => {
+    if (log.priceSnapshot !== undefined && log.priceSnapshot !== null) {
+        return log.priceSnapshot;
+    }
+    return currentGlobalPrice;
 };
 
 const NativeScanner = ({ onScan, onCancel }) => {
@@ -310,14 +320,20 @@ export default function App() {
   const [pendingWrites, setPendingWrites] = useState(false);
 
   const [trucks, setTrucks] = useState([]);
-  const [logs, setLogs] = useState([]); // LOGS DEL DÍA (Dashboard y BI Realtime)
-
+  const [logs, setLogs] = useState([]); // TODOS LOS LOGS (Standard + Ejido)
   const [locations, setLocations] = useState([]);
   const [users, setUsers] = useState([]);
   const [dailyNote, setDailyNote] = useState("");
   const [pricePerM3, setPricePerM3] = useState(0); 
   const [isScanning, setIsScanning] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState("");
+  
+  // -- BUSCADOR --
+  const [searchTerm, setSearchTerm] = useState("");
+  // -- VISTA DASHBOARD (Normal vs Ejido) --
+  const [viewMode, setViewMode] = useState('normal'); // 'normal' | 'ejido'
+  // -- MODO GRABACIÓN (Scanner) --
+  const [isEjidoMode, setIsEjidoMode] = useState(false);
   
   const [newTruck, setNewTruck] = useState({ placas: '', capacidad: '', agrupacion: '' });
   const [newLocation, setNewLocation] = useState({ name: '', cc: '' });
@@ -348,6 +364,12 @@ export default function App() {
   const [exportStartDate, setExportStartDate] = useState(getTodayString());
   const [exportEndDate, setExportEndDate] = useState(getTodayString());
   
+  const [expandWeeklyGen, setExpandWeeklyGen] = useState(false);
+  const [weeklyPin, setWeeklyPin] = useState("");
+  const [isWeeklyUnlocked, setIsWeeklyUnlocked] = useState(false);
+  const [weeklyStart, setWeeklyStart] = useState(getTodayString());
+  const [weeklyEnd, setWeeklyEnd] = useState(getTodayString());
+
   const [noteData, setNoteData] = useState(null);
   const [showNotePreview, setShowNotePreview] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
@@ -408,12 +430,9 @@ export default function App() {
   useEffect(() => {
     if(!currentAuth.isAuthenticated || !user) return;
     const reportPresence = async () => {
-        const gps = await getGPS(); 
-        if (!gps) return; 
-
         const userStatusRef = doc(db, collectionPath, "status", currentAuth.name);
         try {
-            await setDoc(userStatusRef, { name: currentAuth.name, role: currentAuth.role, lastSeen: serverTimestamp(), gps: gps }, { merge: true });
+            await setDoc(userStatusRef, { name: currentAuth.name, role: currentAuth.role, lastSeen: serverTimestamp() }, { merge: true });
         } catch(e) {}
     };
     reportPresence();
@@ -476,6 +495,21 @@ export default function App() {
     return () => { unsubTrucks(); unsubLocs(); unsubUsers(); unsubLogs(); }
   }, [user, selectedDate, isMaster]); 
 
+  // --- FILTERED LOGS HELPER ---
+  const getFilteredLogs = () => {
+      // 1. Filtrar por Modo Visualización (Normal o Ejido)
+      const visibleLogs = logs.filter(l => viewMode === 'ejido' ? l.isEjido : !l.isEjido);
+
+      // 2. Filtrar por Búsqueda (si existe)
+      if (!searchTerm) return visibleLogs;
+      const lowerSearch = searchTerm.toLowerCase();
+      return visibleLogs.filter(log => 
+          (log.placas && log.placas.toLowerCase().includes(lowerSearch)) ||
+          (log.locationName && log.locationName.toLowerCase().includes(lowerSearch)) ||
+          (log.noteNumber && log.noteNumber.toLowerCase().includes(lowerSearch))
+      );
+  };
+
   const handleLogin = async () => {
     if (!user) { alert("Error de conexión. Recarga."); return; }
     if (!authInput.user || !authInput.pin) return alert("Ingresa usuario y PIN");
@@ -527,20 +561,52 @@ export default function App() {
     }
   };
 
+  const handleToggleEjidoMode = () => {
+      if (isEjidoMode) {
+          setIsEjidoMode(false);
+      } else {
+          const pin = prompt("🔒 SEGURIDAD: Ingresa PIN para habilitar Modo Ejido:");
+          if (pin === SECURITY_CONFIG.EJIDO_MODE_PIN) {
+              setIsEjidoMode(true);
+              alert("⚠️ MODO EJIDO ACTIVADO: Los viajes registrados NO tendrán valor monetario.");
+          } else {
+              alert("PIN Incorrecto.");
+          }
+      }
+  };
+
   const handleTruckClick = (plate) => {
       if (isSupervisorOrHigher) {
-          const trips = logs.filter(l => l.placas === plate);
-          if (trips.length === 0) return alert("No hay viajes para esta placa hoy.");
+          // Nota: Solo mostrar viajes del modo actual
+          const trips = logs.filter(l => l.placas === plate && (viewMode === 'ejido' ? l.isEjido : !l.isEjido));
+          if (trips.length === 0) return alert("No hay viajes visibles para esta placa hoy en este modo.");
+          
           const totalM3 = trips.reduce((acc, curr) => acc + (curr.capacidad || 0), 0);
-          const totalImporte = trips.reduce((acc, curr) => acc + ((curr.capacidad || 0) * (curr.priceSnapshot || pricePerM3)), 0);
-          const truckInfo = trucks.find(t => t.placas === plate) || { agrupacion: 'S/N' };
-          setNoteData({ date: selectedDate, plate: plate, provider: truckInfo.agrupacion, trips: trips, totalViajes: trips.length, totalM3: totalM3, totalImporte: totalImporte });
+          
+          // BLINDAJE FINANCIERO: USAR PRECIO HISTÓRICO DE CADA VIAJE
+          const totalImporte = trips.reduce((acc, curr) => {
+              const histPrice = getLogPrice(curr, pricePerM3);
+              return acc + ((curr.capacidad || 0) * histPrice);
+          }, 0); 
+          
+          // BLINDAJE PROVEEDOR: USAR EL DEL PRIMER LOG ENCONTRADO (HISTÓRICO)
+          const truckInfo = trips[0] || { agrupacion: 'S/N' };
+          
+          setNoteData({ 
+              date: selectedDate, 
+              plate: plate, 
+              provider: truckInfo.agrupacion, 
+              trips: trips, 
+              totalViajes: trips.length, 
+              totalM3: totalM3, 
+              totalImporte: totalImporte 
+          });
           setShowNotePreview(true);
       }
   };
 
   const handleUnlockPrice = () => {
-      if(pricePinInput === "20202025") {
+      if(pricePinInput === SECURITY_CONFIG.PRICE_CHANGE_PIN) {
           setIsPriceUnlocked(true);
           setPricePinInput("");
       } else {
@@ -548,11 +614,20 @@ export default function App() {
       }
   };
 
+  const handleUnlockWeekly = () => {
+      if(weeklyPin === SECURITY_CONFIG.WEEKLY_REPORT_PIN) {
+          setIsWeeklyUnlocked(true);
+          setWeeklyPin("");
+      } else {
+          alert("Código incorrecto");
+      }
+  };
+
   const savePrice = async () => {
     if (!isMaster) return alert("⛔ Solo MasterAdmin.");
     
     const confirmPin = prompt("⚠️ SEGURIDAD: Ingresa el PIN nuevamente para confirmar el cambio de precio:");
-    if(confirmPin !== "20202025") return alert("PIN Incorrecto. Cambio cancelado.");
+    if(confirmPin !== SECURITY_CONFIG.PRICE_CHANGE_PIN) return alert("PIN Incorrecto. Cambio cancelado.");
 
     try { 
         await setDoc(doc(db, collectionPath, "settings", "general"), { pricePerM3: Number(pricePerM3) }, { merge: true }); 
@@ -562,10 +637,77 @@ export default function App() {
     } catch (e) { alert("Error: " + e.message); }
   };
 
+  // Helper function to build the bottom summary matrix for daily reports
+  const appendDailySummaryToSheet = (sheetData, logsToSummarize, currentPrice) => {
+     const summaryTree = {};
+     logsToSummarize.forEach(log => {
+         const prov = log.agrupacion || "SIN PROVEEDOR";
+         const ccName = `${log.locationName || 'Zona'} (${log.cc || 'S/N'})`;
+         // BLINDAJE FINANCIERO:
+         const p = getLogPrice(log, currentPrice);
+         
+         const m3 = log.capacidad || 0;
+         const money = m3 * p;
+         const note = log.noteNumber || "";
+
+         if (!summaryTree[prov]) {
+             summaryTree[prov] = { totalTrips: 0, totalM3: 0, totalMoney: 0, ccs: {} };
+         }
+         
+         summaryTree[prov].totalTrips += 1;
+         summaryTree[prov].totalM3 += m3;
+         summaryTree[prov].totalMoney += money;
+
+         if (!summaryTree[prov].ccs[ccName]) {
+             summaryTree[prov].ccs[ccName] = { notes: [], trips: 0, m3: 0, money: 0 };
+         }
+         
+         if (note) summaryTree[prov].ccs[ccName].notes.push(note);
+         summaryTree[prov].ccs[ccName].trips += 1;
+         summaryTree[prov].ccs[ccName].m3 += m3;
+         summaryTree[prov].ccs[ccName].money += money;
+     });
+
+     sheetData.push([""]);
+     sheetData.push([""]);
+     sheetData.push(["RESUMEN DETALLADO POR PROVEEDOR Y CENTRO DE COSTO"]);
+     sheetData.push(["PROVEEDOR", "CENTRO DE COSTO (DESTINO)", "FOLIOS / NOTAS", "VIAJES", "M3", "IMPORTE"]);
+
+     Object.keys(summaryTree).sort().forEach(prov => {
+         const provData = summaryTree[prov];
+         Object.keys(provData.ccs).sort().forEach(ccKey => {
+             const ccData = provData.ccs[ccKey];
+             const uniqueNotes = [...new Set(ccData.notes)].filter(n => n && n.trim() !== "");
+             const notesStr = uniqueNotes.join(", ");
+             sheetData.push([
+                 prov, 
+                 ccKey, 
+                 notesStr, 
+                 ccData.trips, 
+                 ccData.m3, 
+                 fmtMoney(ccData.money)
+             ]);
+         });
+         sheetData.push([
+             `TOTAL ${prov}`, 
+             "", 
+             "", 
+             provData.totalTrips, 
+             provData.totalM3, 
+             fmtMoney(provData.totalMoney)
+         ]);
+         sheetData.push([""]); 
+     });
+  };
+
   const handleExportDailyExcel = () => {
     if (!isSupervisorOrHigher) return alert("Permisos insuficientes");
     if (!window.XLSX) return alert("Cargando Excel...");
     const XLSX_LIB = window.XLSX;
+    
+    // FILTRAR SOLO NORMALES (NO EJIDO)
+    const dailyLogs = logs.filter(l => !l.isEjido);
+
     try {
         const wb = XLSX_LIB.utils.book_new();
         const sheetData = [];
@@ -574,22 +716,198 @@ export default function App() {
         sheetData.push([`GENERADO POR: ${currentAuth.name}`]);
         sheetData.push([""]);
         if (dailyNote) { sheetData.push(["OBSERVACIONES DEL DÍA:", dailyNote]); sheetData.push([""]); }
-        // FIX: ELIMINADA COLUMNA FACTURA DEL DETALLE DIARIO
-        sheetData.push(["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO APL.", "ZONA", "CC", "NOTA FÍSICA", "CAPTURISTA", "GPS"]);
-        logs.forEach((log, index) => {
-            const priceUsed = log.priceSnapshot || pricePerM3;
-            const gpsLink = log.gps ? `https://maps.google.com/?q=${log.gps.lat},${log.gps.lng}` : 'Sin GPS';
+        sheetData.push(["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO APL.", "ZONA", "CC", "NOTA FÍSICA", "CAPTURISTA"]);
+        dailyLogs.forEach((log, index) => {
+            // BLINDAJE FINANCIERO
+            const priceUsed = getLogPrice(log, pricePerM3);
             const capturista = log.recordedBy || 'Desconocido';
-            sheetData.push([index + 1, log.createdAt ? log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '', log.placas, log.agrupacion, log.capacidad, fmtMoney(priceUsed), log.locationName, log.cc, log.noteNumber || '', capturista, gpsLink]);
+            sheetData.push([index + 1, log.createdAt ? log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '', log.placas, log.agrupacion, log.capacidad, fmtMoney(priceUsed), log.locationName, log.cc, log.noteNumber || '', capturista]);
         });
+        
         sheetData.push([""]);
-        const totalM3 = logs.reduce((acc, curr) => acc + (curr.capacidad || 0), 0);
-        sheetData.push(["TOTAL VIAJES:", logs.length]);
+        const totalM3 = dailyLogs.reduce((acc, curr) => acc + (curr.capacidad || 0), 0);
+        sheetData.push(["TOTAL VIAJES:", dailyLogs.length]);
         sheetData.push(["TOTAL VOLUMEN (m3):", totalM3]);
+
+        appendDailySummaryToSheet(sheetData, dailyLogs, pricePerM3);
+
         const ws = XLSX_LIB.utils.aoa_to_sheet(sheetData);
         XLSX_LIB.utils.book_append_sheet(wb, ws, "Reporte Diario");
         XLSX_LIB.writeFile(wb, `Reporte_Diario_${selectedDate}.xlsx`);
     } catch (e) { alert("Error: " + e.message); }
+  };
+
+  const handleGenerateWeeklyReport = async () => {
+      if (!isWeeklyUnlocked && !isMaster) return alert("Desbloquea primero.");
+      if (!window.XLSX) return alert("Cargando librería...");
+      setLoading(true);
+      
+      try {
+          const q = query(
+            collection(db, collectionPath, "logs"),
+            where("dateString", ">=", weeklyStart),
+            where("dateString", "<=", weeklyEnd)
+          );
+          const snap = await getDocs(q);
+          // FILTRAR LOGS NORMALES SOLAMENTE
+          const logsData = snap.docs
+                .map(d => ({...d.data(), id:d.id, createdAt: d.data().createdAt?.toDate() }))
+                .filter(l => !l.isEjido);
+          
+          if(logsData.length === 0) { setLoading(false); return alert("No hay datos en este rango"); }
+
+          const wb = window.XLSX.utils.book_new();
+          const providers = {};
+          logsData.forEach(l => {
+              const p = l.agrupacion || "SIN_PROVEEDOR";
+              if(!providers[p]) providers[p] = [];
+              providers[p].push(l);
+          });
+
+          for (const provName of Object.keys(providers)) {
+              const provLogs = providers[provName];
+              const sheetRows = [];
+              
+              sheetRows.push(["REPORTE DE ACARREOS"]);
+              sheetRows.push([`PROVEEDOR: ${provName}`]);
+              sheetRows.push([`PERIODO: ${weeklyStart} al ${weeklyEnd}`]);
+              sheetRows.push([""]);
+
+              const truckGroups = {};
+              provLogs.forEach(l => {
+                  if(!truckGroups[l.placas]) truckGroups[l.placas] = [];
+                  truckGroups[l.placas].push(l);
+              });
+
+              const sortedPlates = Object.keys(truckGroups).sort((a, b) => {
+                  const capA = truckGroups[a][0]?.capacidad || 0;
+                  const capB = truckGroups[b][0]?.capacidad || 0;
+                  if (capA !== capB) return capA - capB; 
+                  return a.localeCompare(b); 
+              });
+
+              let grandTotalTrips = 0;
+              let grandTotalMoney = 0;
+              
+              const volumeStats = {};
+              const cecoStats = {};
+
+              for(const plate of sortedPlates) {
+                  const truckLogs = truckGroups[plate];
+                  const capacity = truckLogs[0].capacidad || 0;
+
+                  sheetRows.push([`NUMERO DE PLACA: ${plate}`, `CAPACIDAD: ${capacity} m3`]);
+                  sheetRows.push(["#", "FECHA", "FOLIO/NOTA", "CECO", "ZONA", "VIAJES", "COSTO X VIAJE", "IMPORTE TOTAL"]);
+
+                  const tripGroups = {};
+                  truckLogs.forEach(l => {
+                      const date = l.dateString;
+                      const cc = l.cc || "S/N";
+                      const zone = l.locationName || "S/N";
+                      // BLINDAJE FINANCIERO
+                      const price = getLogPrice(l, pricePerM3);
+                      
+                      const key = `${date}|${cc}|${zone}|${price}`;
+                      
+                      if(!tripGroups[key]) tripGroups[key] = { 
+                          date, cc, zone, price, 
+                          count: 0, 
+                          notes: [], 
+                          totalM3: 0 
+                      };
+                      tripGroups[key].count++;
+                      tripGroups[key].notes.push(l.noteNumber || "");
+                      tripGroups[key].totalM3 += (l.capacidad || 0);
+
+                      const capKey = l.capacidad || 0;
+                      if(!volumeStats[capKey]) volumeStats[capKey] = { count: 0, money: 0 };
+                      volumeStats[capKey].count++;
+                      volumeStats[capKey].money += (l.capacidad * price);
+
+                      if(!cecoStats[cc]) cecoStats[cc] = { count: 0, money: 0 };
+                      cecoStats[cc].count++;
+                      cecoStats[cc].money += (l.capacidad * price);
+                  });
+
+                  let truckSubtotalMoney = 0;
+                  let truckSubtotalTrips = 0;
+                  let itemCounter = 1;
+
+                  Object.values(tripGroups).sort((a,b) => a.date.localeCompare(b.date)).forEach( group => {
+                      const totalImporte = group.totalM3 * group.price;
+                      const unitCost = totalImporte / group.count;
+                      const uniqueNotes = [...new Set(group.notes)].filter(n => n && n.trim() !== "");
+
+                      sheetRows.push([
+                          itemCounter++,
+                          group.date,
+                          uniqueNotes.join(", "), 
+                          group.cc,
+                          group.zone,
+                          group.count,
+                          fmtMoney(unitCost),
+                          fmtMoney(totalImporte)
+                      ]);
+
+                      truckSubtotalMoney += totalImporte;
+                      truckSubtotalTrips += group.count;
+                  });
+
+                  sheetRows.push(["", "", "", "", "SUBTOTAL:", truckSubtotalTrips, "", fmtMoney(truckSubtotalMoney)]);
+                  sheetRows.push([""]); 
+                  
+                  grandTotalTrips += truckSubtotalTrips;
+                  grandTotalMoney += truckSubtotalMoney;
+              }
+
+              sheetRows.push([""]);
+              sheetRows.push(["============================================================"]);
+              sheetRows.push(["RESUMEN DE VOLUMETRÍA"]);
+              sheetRows.push(["#", "DESCRIPCIÓN (m3)", "NUMERO DE VIAJES", "IMPORTE TOTAL"]);
+              
+              let volTotalMoney = 0;
+              let volTotalTrips = 0;
+              let volCounter = 1;
+
+              Object.keys(volumeStats).sort((a,b)=>b-a).forEach(cap => {
+                  const s = volumeStats[cap];
+                  sheetRows.push([
+                      volCounter++,
+                      `UNIDADES DE ${cap} m3`,
+                      s.count,
+                      fmtMoney(s.money)
+                  ]);
+                  volTotalMoney += s.money;
+                  volTotalTrips += s.count;
+              });
+              sheetRows.push(["", "TOTALES", volTotalTrips, fmtMoney(volTotalMoney)]);
+
+              sheetRows.push([""]);
+              sheetRows.push(["CONTABILIDAD (POR CECO)"]);
+              sheetRows.push(["CENTRO DE COSTO", "VIAJES", "TOTAL"]);
+              
+              let cecoTotalMoney = 0;
+              let cecoTotalTrips = 0;
+              Object.keys(cecoStats).sort().forEach(cc => {
+                  const s = cecoStats[cc];
+                  sheetRows.push([cc, s.count, fmtMoney(s.money)]);
+                  cecoTotalMoney += s.money;
+                  cecoTotalTrips += s.count;
+              });
+              sheetRows.push(["SUMA DE TOTALES", cecoTotalTrips, fmtMoney(cecoTotalMoney)]);
+
+              const ws = window.XLSX.utils.aoa_to_sheet(sheetRows);
+              const safeName = provName.replace(/[\/\\\?\*\[\]]/g, "").substring(0, 30) || "Prov";
+              window.XLSX.utils.book_append_sheet(wb, ws, safeName);
+          }
+
+          window.XLSX.writeFile(wb, `Semana_${weeklyStart}_${weeklyEnd}.xlsx`);
+
+      } catch(e) {
+          console.error(e);
+          alert("Error al generar: " + e.message);
+      }
+      setLoading(false);
   };
 
   const handleExportExcel = async () => {
@@ -605,7 +923,10 @@ export default function App() {
         where("dateString", "<=", exportEndDate)
       );
       const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(d => ({ ...d.data(), createdAt: d.data().createdAt?.toDate() }));
+      // FILTRAR LOGS NORMALES SOLAMENTE
+      const data = snapshot.docs
+        .map(d => ({ ...d.data(), createdAt: d.data().createdAt?.toDate() }))
+        .filter(l => !l.isEjido);
       
       if (data.length === 0) { setLoading(false); return alert("Sin datos en el rango seleccionado"); }
 
@@ -616,7 +937,8 @@ export default function App() {
 
       data.forEach(log => {
           totalM3 += (log.capacidad || 0);
-          const p = log.priceSnapshot || pricePerM3;
+          // BLINDAJE FINANCIERO
+          const p = getLogPrice(log, pricePerM3);
           totalImport += (log.capacidad || 0) * p;
       });
 
@@ -638,39 +960,56 @@ export default function App() {
       const supplierStats = {};
       const providerCCStats = {};
       const globalCCStats = {};
+      const simpleProviderStats = {}; 
+      let grandTotalTrips = 0;
+      let grandTotalM3 = 0;
+      let grandTotalMoney = 0;
 
       data.forEach(log => {
+        // BLINDAJE: Usar proveedor histórico
         const prov = log.agrupacion || "SIN ASIGNAR";
-        const p = log.priceSnapshot || pricePerM3;
+        // BLINDAJE: Usar precio histórico
+        const p = getLogPrice(log, pricePerM3);
+        const m3 = log.capacidad || 0;
+        const money = m3 * p;
 
         if (!supplierStats[prov]) supplierStats[prov] = { plates: {}, totalTrips: 0, totalM3: 0, money: 0 };
         supplierStats[prov].totalTrips += 1;
-        supplierStats[prov].totalM3 += (log.capacidad || 0);
-        supplierStats[prov].money += (log.capacidad || 0) * p;
+        supplierStats[prov].totalM3 += m3;
+        supplierStats[prov].money += money;
 
         const plate = log.placas;
         if (!supplierStats[prov].plates[plate]) supplierStats[prov].plates[plate] = { trips: 0, m3: 0, money: 0 };
         supplierStats[prov].plates[plate].trips += 1;
-        supplierStats[prov].plates[plate].m3 += (log.capacidad || 0);
-        supplierStats[prov].plates[plate].money += (log.capacidad || 0) * p;
+        supplierStats[prov].plates[plate].m3 += m3;
+        supplierStats[prov].plates[plate].money += money;
 
         const ccKey = `${log.locationName} (CC: ${log.cc || 'S/N'})`;
         if (!providerCCStats[prov]) providerCCStats[prov] = {};
         if (!providerCCStats[prov][ccKey]) providerCCStats[prov][ccKey] = { m3: 0, money: 0 };
-        providerCCStats[prov][ccKey].m3 += (log.capacidad || 0);
-        providerCCStats[prov][ccKey].money += (log.capacidad || 0) * p;
+        providerCCStats[prov][ccKey].m3 += m3;
+        providerCCStats[prov][ccKey].money += money;
 
         const cleanCC = log.cc ? log.cc.toUpperCase().trim() : 'SIN ASIGNAR';
         const locationName = log.locationName || 'Desconocido';
         
         if (!globalCCStats[cleanCC]) globalCCStats[cleanCC] = { trips: 0, m3: 0, money: 0, locations: new Set() };
         globalCCStats[cleanCC].trips += 1;
-        globalCCStats[cleanCC].m3 += (log.capacidad || 0);
-        globalCCStats[cleanCC].money += (log.capacidad || 0) * p;
+        globalCCStats[cleanCC].m3 += m3;
+        globalCCStats[cleanCC].money += money;
         globalCCStats[cleanCC].locations.add(locationName);
+        
+        if(!simpleProviderStats[prov]) simpleProviderStats[prov] = { trips:0, m3:0, money:0 };
+        simpleProviderStats[prov].trips += 1;
+        simpleProviderStats[prov].m3 += m3;
+        simpleProviderStats[prov].money += money;
+
+        grandTotalTrips += 1;
+        grandTotalM3 += m3;
+        grandTotalMoney += money;
       });
 
-      Object.keys(supplierStats).forEach(prov => {
+      Object.keys(supplierStats).sort().forEach(prov => {
         summaryData.push([`PROVEEDOR: ${prov}`, "", supplierStats[prov].totalTrips, supplierStats[prov].totalM3, fmtMoney(supplierStats[prov].money)]);
         Object.keys(supplierStats[prov].plates).forEach(plate => {
           const pData = supplierStats[prov].plates[plate];
@@ -678,30 +1017,63 @@ export default function App() {
         });
         summaryData.push([""]); 
       });
+      summaryData.push(["TOTAL GENERAL FLOTILLA", "", grandTotalTrips, grandTotalM3, fmtMoney(grandTotalMoney)]); 
+      summaryData.push([""]); 
 
       summaryData.push([""]); 
       summaryData.push(["DESGLOSE DE GASTOS POR CENTRO DE COSTO (POR PROVEEDOR)"]);
       summaryData.push(["Proveedor", "Centro de Costo (Zona)", "Volumen Total (m3)", "Importe Total ($)"]);
 
-      Object.keys(providerCCStats).forEach(prov => {
-          Object.keys(providerCCStats[prov]).forEach(ccKey => {
+      Object.keys(providerCCStats).sort().forEach(prov => {
+          let provM3 = 0;
+          let provMoney = 0;
+          Object.keys(providerCCStats[prov]).sort().forEach(ccKey => {
               const stats = providerCCStats[prov][ccKey];
               summaryData.push([prov, ccKey, stats.m3, fmtMoney(stats.money)]);
+              provM3 += stats.m3;
+              provMoney += stats.money;
           });
+          summaryData.push([`TOTAL ${prov}`, "", provM3, fmtMoney(provMoney)]); 
           summaryData.push([""]);
       });
+      summaryData.push(["TOTAL GENERAL POR ZONAS", "", grandTotalM3, fmtMoney(grandTotalMoney)]); 
 
       summaryData.push([""]);
       summaryData.push([""]);
       summaryData.push(["DESGLOSE FINANCIERO POR CENTRO DE COSTOS (CC)"]);
       summaryData.push(["CÓDIGO CC", "ZONAS / BANCOS INCLUIDOS", "VOLUMEN TOTAL (m3)", "IMPORTE TOTAL ($)", "% GASTO"]);
       
-      Object.keys(globalCCStats).forEach(cc => {
+      Object.keys(globalCCStats).sort().forEach(cc => {
           const s = globalCCStats[cc];
           const pct = totalImport > 0 ? (s.money / totalImport) * 100 : 0;
           const locationsList = Array.from(s.locations).join(", ");
           summaryData.push([cc, locationsList, s.m3, fmtMoney(s.money), `${pct.toFixed(2)}%`]);
       });
+      summaryData.push(["TOTAL GENERAL CC", "", grandTotalM3, fmtMoney(grandTotalMoney), "100%"]); 
+      
+      summaryData.push([""]);
+      summaryData.push([""]);
+      summaryData.push(["=========================================================================="]);
+      summaryData.push([`Total de viajes del periodo (${exportStartDate} al ${exportEndDate})`]); 
+      summaryData.push(["PROVEEDOR", "TOTAL DE VIAJES", "TOTAL DE IMPORTE", "TOTAL DE M3"]);
+
+      Object.keys(simpleProviderStats).sort().forEach(prov => {
+          const s = simpleProviderStats[prov];
+          summaryData.push([prov, s.trips, fmtMoney(s.money), s.m3]);
+      });
+
+      summaryData.push(["TOTALES", grandTotalTrips, fmtMoney(grandTotalMoney), grandTotalM3]);
+      summaryData.push([""]);
+      summaryData.push([""]);
+
+      summaryData.push(["ESTADO DE FACTURACIÓN"]);
+      summaryData.push(["PROVEEDOR", "IMPORTE", "FACTURA", "TOTAL DE FACTURA", "DIFERENCIA POR FACTURAR"]);
+
+      Object.keys(simpleProviderStats).sort().forEach(prov => {
+          const s = simpleProviderStats[prov];
+          summaryData.push([prov, fmtMoney(s.money), "", "", ""]);
+      });
+      summaryData.push(["TOTALES", fmtMoney(grandTotalMoney), "", "", ""]);
 
       const wsSummary = XLSX_LIB.utils.aoa_to_sheet(summaryData);
       XLSX_LIB.utils.book_append_sheet(wb, wsSummary, "RESUMEN_TOTAL");
@@ -712,42 +1084,16 @@ export default function App() {
         const dayLogs = data.filter(d => d.dateString === day);
         dayLogs.sort((a,b) => a.createdAt - b.createdAt);
         
-        const dayProvStats = {};
-        const truckNotes = {}; 
-        const dayCCStats = {};
-
-        dayLogs.forEach(log => {
-          const p = log.priceSnapshot || pricePerM3;
-          const prov = log.agrupacion || "SIN ASIGNAR";
-          if (!dayProvStats[prov]) dayProvStats[prov] = { plates: {} };
-          const plate = log.placas;
-          if (!dayProvStats[prov].plates[plate]) dayProvStats[prov].plates[plate] = { trips: 0, m3: 0, capacity: log.capacidad, money: 0 };
-          dayProvStats[prov].plates[plate].trips += 1;
-          dayProvStats[prov].plates[plate].m3 += (log.capacidad || 0);
-          dayProvStats[prov].plates[plate].money += (log.capacidad || 0) * p;
-
-          if (log.noteNumber && !truckNotes[plate]) {
-              truckNotes[plate] = log.noteNumber;
-          }
-
-          const ccKey = `${log.locationName} (CC: ${log.cc || 'S/N'})`;
-          if (!dayCCStats[ccKey]) dayCCStats[ccKey] = { trips: 0, m3: 0, money: 0 };
-          dayCCStats[ccKey].trips += 1;
-          dayCCStats[ccKey].m3 += (log.capacidad || 0);
-          dayCCStats[ccKey].money += (log.capacidad || 0) * p;
-        });
-
-        // FIX: ELIMINADA COLUMNA FACTURA DEL DETALLE DIARIO
         const daySheetData = [
           ["CONCENTRADORA DE RESIDUOS MEXICANA, S.A. DE C.V."],
           [`CONTROL DE VIAJES DE ACARREOS - FECHA: ${day}`],
           [""],
-          ["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO", "IMPORTE", "RUTA", "CC", "NOTA", "CAPTURISTA", "GPS LINK"]
+          ["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO", "IMPORTE", "RUTA", "CC", "NOTA", "CAPTURISTA"]
         ];
 
         dayLogs.forEach((log, idx) => {
-            const p = log.priceSnapshot || pricePerM3;
-            const gpsLink = log.gps ? `https://maps.google.com/?q=${log.gps.lat},${log.gps.lng}` : 'Sin GPS';
+            // BLINDAJE FINANCIERO
+            const p = getLogPrice(log, pricePerM3);
             const capturista = log.recordedBy || 'Desconocido';
             daySheetData.push([
                 idx + 1,
@@ -760,36 +1106,11 @@ export default function App() {
                 log.locationName,
                 log.cc,
                 log.noteNumber || '',
-                capturista,
-                gpsLink
+                capturista
             ]);
         });
 
-        daySheetData.push([""]);
-        daySheetData.push([""]);
-        
-        // FIX: COLUMNA FACTURA EN RESUMEN INFERIOR
-        daySheetData.push(["RESUMEN DEL DÍA POR CAMIÓN"]);
-        daySheetData.push(["No.", "PLACA", "PROVEEDOR", "M3", "PRECIO REF", "No. VIAJES", "COSTO TOTAL", "TOTAL M3", "NO. NOTA", "NO. FACTURA", "SEMANA ENVIO", "OBSERVACIONES"]);
-
-        let rowCount = 1;
-        Object.keys(dayProvStats).forEach(prov => {
-           Object.keys(dayProvStats[prov].plates).forEach(plate => {
-             const pData = dayProvStats[prov].plates[plate];
-             const finalNote = truckNotes[plate] || ""; 
-             // Campo vacío para factura manual
-             daySheetData.push([rowCount++, plate, prov, pData.capacity, fmtMoney(pricePerM3), pData.trips, fmtMoney(pData.money), pData.m3, finalNote, "", "", ""]);
-           });
-        });
-
-        daySheetData.push([""]);
-        daySheetData.push(["RESUMEN DE ZONAS Y CENTROS DE COSTO DEL DÍA"]);
-        daySheetData.push(["ZONA / BANCO (CC)", "No. VIAJES", "VOLUMEN (m3)", "IMPORTE ($)"]);
-        
-        Object.keys(dayCCStats).forEach(key => {
-            const stat = dayCCStats[key];
-            daySheetData.push([key, stat.trips, stat.m3, fmtMoney(stat.money)]);
-        });
+        appendDailySummaryToSheet(daySheetData, dayLogs, pricePerM3);
         
         const wsDay = XLSX_LIB.utils.aoa_to_sheet(daySheetData);
         XLSX_LIB.utils.book_append_sheet(wb, wsDay, day);
@@ -801,13 +1122,68 @@ export default function App() {
     setLoading(false);
   };
 
+  // --- REPORTE ESPECIAL EJIDO ---
+  const handleExportEjidoReport = async () => {
+      if (!isSupervisorOrHigher) return alert("Permisos insuficientes");
+      if (!window.XLSX) return alert("Cargando Excel...");
+      setLoading(true);
+
+      try {
+          const q = query(
+            collection(db, collectionPath, "logs"),
+            where("dateString", ">=", exportStartDate),
+            where("dateString", "<=", exportEndDate)
+          );
+          const snap = await getDocs(q);
+          // FILTRAR SOLO EJIDO
+          const data = snap.docs
+            .map(d => ({ ...d.data(), createdAt: d.data().createdAt?.toDate() }))
+            .filter(l => l.isEjido);
+          
+          if (data.length === 0) { setLoading(false); return alert("Sin viajes Ejido en el rango seleccionado."); }
+
+          const wb = window.XLSX.utils.book_new();
+          const sheetData = [];
+          
+          sheetData.push(["REPORTE ESPECIAL - VIAJES EJIDO (SIN VALOR COMERCIAL)"]);
+          sheetData.push([`Periodo: ${exportStartDate} al ${exportEndDate}`]);
+          sheetData.push([`Generado por: ${currentAuth.name}`]);
+          sheetData.push([""]);
+          
+          sheetData.push(["FECHA", "HORA", "PLACAS", "PROVEEDOR", "M3", "ZONA / DESTINO", "NOTA", "CAPTURISTA"]);
+          
+          let totalM3 = 0;
+          data.sort((a,b) => a.createdAt - b.createdAt);
+
+          data.forEach(log => {
+              totalM3 += (log.capacidad || 0);
+              sheetData.push([
+                  log.dateString,
+                  log.createdAt ? log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '',
+                  log.placas,
+                  log.agrupacion,
+                  log.capacidad,
+                  log.locationName,
+                  log.noteNumber || '',
+                  log.recordedBy
+              ]);
+          });
+          
+          sheetData.push([""]);
+          sheetData.push(["TOTAL VIAJES:", data.length]);
+          sheetData.push(["TOTAL VOLUMEN:", totalM3]);
+
+          const ws = window.XLSX.utils.aoa_to_sheet(sheetData);
+          window.XLSX.utils.book_append_sheet(wb, ws, "EJIDO");
+          window.XLSX.writeFile(wb, `Reporte_Ejido_${exportStartDate}_al_${exportEndDate}.xlsx`);
+
+      } catch(e) { alert("Error: " + e.message); }
+      setLoading(false);
+  };
+
   const processScan = async (truck, location, noteNumber = "") => {
     setProcessingScan(true);
-    let gps = null;
-    try {
-        gps = await getGPS();
-    } catch(e) { console.log("GPS Skipped"); }
-
+    
     const logData = {
         truckId: truck.id, 
         placas: truck.placas, 
@@ -816,11 +1192,12 @@ export default function App() {
         locationName: location.name, 
         cc: location.cc,
         noteNumber: noteNumber,
-        priceSnapshot: Number(pricePerM3),
+        // LOGICA EJIDO
+        isEjido: isEjidoMode,
+        priceSnapshot: isEjidoMode ? 0 : Number(pricePerM3), // $0 si es ejido
         createdAt: serverTimestamp(),
         dateString: getTodayString(),
-        recordedBy: currentAuth.name,
-        gps: gps 
+        recordedBy: currentAuth.name
     };
 
     addDoc(collection(db, collectionPath, "logs"), logData).catch(e => console.error("Error saving doc", e));
@@ -876,7 +1253,7 @@ export default function App() {
       if (!isMaster) return alert("⛔ Solo MasterAdmin."); 
       if (!newUser.name || !newUser.pin) return alert("Faltan datos"); 
       
-      if (newUser.pin.length < 6) return alert("⚠️ Seguridad: El PIN debe tener al menos 6 dígitos.");
+      if (newUser.pin.length < SECURITY_CONFIG.MIN_PIN_LENGTH) return alert(`⚠️ Seguridad: El PIN debe tener al menos ${SECURITY_CONFIG.MIN_PIN_LENGTH} dígitos.`);
 
       const q = query(collection(db, collectionPath, "system_users"), where("name", "==", newUser.name.trim()));
       const snap = await getDocs(q);
@@ -887,6 +1264,7 @@ export default function App() {
       setNewUser({ name: '', pin: '', role: 'checker' }); 
       alert("Usuario creado exitosamente."); 
   };
+
   const deleteItem = async (coll, id) => { 
       if (!isAdminOrMaster && coll !== 'system_users') return alert("⛔ Solo Admin/Master.");
       if (coll === 'system_users' && !isMaster) return alert("⛔ Solo MasterAdmin puede eliminar usuarios.");
@@ -912,12 +1290,13 @@ export default function App() {
         alert("Limpieza completada.");
     } catch(e) { alert("Error: " + e.message); }
     setLoading(false);
+    // Reiniciar para evitar estados inconsistentes
+    window.location.reload();
   };
 
-  // --- LOGICA BI (Intelligence) ---
   const getBiData = () => {
       try {
-        const sourceLogs = logs || [];
+        const sourceLogs = logs.filter(l => !l.isEjido); // BI SOLO CUENTA NORMALES
         const hourlyCounts = Array(13).fill(0).map((_,i) => ({ hour: i+7, count: 0 })); 
         sourceLogs.forEach(l => {
             if(!l.createdAt || typeof l.createdAt.getHours !== 'function') return;
@@ -940,7 +1319,13 @@ export default function App() {
       }
   };
 
-  if (loading) return <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center'}}>Cargando Sistema PRO-GOLD...</div>;
+  if (loading) return (
+      <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f172a', color:'white', flexDirection:'column', gap:'20px'}}>
+        <div style={{width:'40px', height:'40px', border:'4px solid rgba(255,255,255,0.3)', borderTop:'4px solid white', borderRadius:'50%', animation:'spin 1s linear infinite'}}></div>
+        <div style={{fontWeight:'bold', letterSpacing:'0.1em'}}>CARGANDO SISTEMA PRO-GOLD...</div>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+  );
 
   if (!currentAuth.isAuthenticated) {
     return (
@@ -970,19 +1355,20 @@ export default function App() {
   }
 
   const { hourlyCounts, providerData, totalM3, count } = getBiData();
+  const filteredLogs = getFilteredLogs();
 
   return (
     <div style={styles.container}>
       <style>{printStyles}</style>
       
-      {/* PWA: SYNC BANNER */}
       {pendingWrites && isOnline && (
         <div style={styles.syncBanner}>📡 Sincronizando datos con el servidor...</div>
       )}
 
-      <header style={styles.header} className="no-print">
+      {/* HEADER DINÁMICO (CAMBIA SI ES EJIDO) */}
+      <header style={{...styles.header, ...(isEjidoMode ? styles.headerEjido : {})}} className="no-print">
         <div>
-          <h1 style={styles.title}>Control <span style={{color:'#fbbf24'}}>GOLD</span></h1>
+          <h1 style={styles.title}>Control <span style={{color: isEjidoMode ? '#e9d5ff' : '#fbbf24'}}>{isEjidoMode ? 'EJIDO' : 'GOLD'}</span></h1>
           <p style={styles.subtitle}>
              <span style={{...styles.onlineIndicator, backgroundColor: isOnline ? '#4ade80' : '#ef4444'}}></span>
              {isOnline ? 'EN LÍNEA' : 'OFFLINE'} 
@@ -991,7 +1377,7 @@ export default function App() {
         </div>
         <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
            <input type="date" value={selectedDate} onChange={(e) => e.target.value && setSelectedDate(e.target.value)} style={{background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'white', borderRadius:'8px', padding:'6px 10px', fontSize:'0.85rem', outline:'none'}} />
-           <button onClick={handleLogout} style={{fontSize:'0.75rem', color:'#fca5a5', background:'none', border:'1px solid #fca5a5', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold'}}>SALIR</button>
+           <button onClick={handleLogout} style={{fontSize:'0.75rem', color: isEjidoMode ? '#e9d5ff' : '#fca5a5', background:'none', border: isEjidoMode ? '1px solid #e9d5ff' : '1px solid #fca5a5', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontWeight:'bold'}}>SALIR</button>
         </div>
       </header>
 
@@ -1010,13 +1396,14 @@ export default function App() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
             <h2 style={{color: '#b91c1c', marginTop:0}}>📝 Nota Inicial</h2>
+            {isEjidoMode && <div style={{background:'#f3e8ff', color:'#6b21a8', padding:'5px 10px', borderRadius:'8px', marginBottom:'15px', fontWeight:'bold', fontSize:'0.8rem'}}>MODO EJIDO: SIN VALOR COMERCIAL</div>}
             <p style={{color:'#64748b', marginBottom:'20px'}}>Ingresa el número de folio físico:</p>
             <input style={{...styles.input, textAlign:'center', fontSize:'1.8rem', fontWeight:'800', letterSpacing:'0.1em'}} value={noteInput} onChange={e => setNoteInput(e.target.value)} placeholder="000" autoFocus />
             <div style={{display:'flex', gap:'15px', marginTop:'25px'}}>
                  <button onClick={cancelNote} style={{...styles.button, backgroundColor:'#ef4444', flex:1}}>CANCELAR</button>
                  <button onClick={confirmNote} style={{...styles.button, ...styles.bgBlueGradient, flex:1}}>CONFIRMAR</button>
             </div>
-            {processingScan && <p style={{marginTop:15, color:'#64748b', fontSize:'0.85rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px'}}>⏳ Guardando ubicación GPS...</p>}
+            {processingScan && <p style={{marginTop:15, color:'#64748b', fontSize:'0.85rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px'}}>⏳ Registrando viaje...</p>}
           </div>
         </div>
       )}
@@ -1027,6 +1414,7 @@ export default function App() {
                    <button onClick={() => setShowNotePreview(false)} style={styles.closeBtn}>×</button>
                    <div id="print-note">
                        <h2 style={{textAlign:'center', borderBottom:'2px solid #e2e8f0', paddingBottom:'15px', margin:'0 0 20px 0', color:'#1e293b'}}>NOTA DE REMISIÓN</h2>
+                       {viewMode === 'ejido' && <div style={{textAlign:'center', color:'#7e22ce', fontWeight:'bold', marginBottom:'10px'}}>REGISTRO EJIDO (SIN VALOR)</div>}
                        <div style={{display:'flex', justifyContent:'space-between', marginBottom:'5px'}}>
                            <span style={{color:'#64748b', fontSize:'0.85rem'}}>FECHA:</span>
                            <strong style={{fontSize:'1rem'}}>{noteData.date}</strong>
@@ -1062,9 +1450,6 @@ export default function App() {
                            <p style={{margin:'5px 0'}}>TOTAL VIAJES: <strong style={{fontSize:'1.2rem'}}>{noteData.totalViajes}</strong></p>
                            <p style={{margin:'5px 0', color:'#2563eb'}}>TOTAL VOLUMEN: <strong style={{fontSize:'1.2rem'}}>{noteData.totalM3} m³</strong></p>
                        </div>
-                       <div style={{marginTop: '40px', textAlign:'center', borderTop:'1px dashed #cbd5e1', paddingTop:'15px', color:'#94a3b8', fontSize:'0.8rem'}}>
-                           Firma de Conformidad
-                       </div>
                    </div>
                    
                    <div style={{display:'flex', gap:'10px', marginTop:'25px'}}>
@@ -1076,33 +1461,6 @@ export default function App() {
                            document.body.innerHTML = originalContents;
                            window.location.reload(); 
                        }} style={{...styles.button, flex:1, fontSize:'0.8rem'}}>IMPRIMIR PDF</button>
-                       
-                       <button onClick={() => {
-                            const wb = window.XLSX.utils.book_new();
-                            const data = [
-                                ["NOTA DE REMISIÓN", `FECHA: ${noteData.date}`],
-                                ["PLACA:", noteData.plate],
-                                ["PROVEEDOR:", noteData.provider],
-                                [""],
-                                ["HORA", "NOTA", "ZONA", "CC", "M3"]
-                            ];
-                            noteData.trips.forEach(t => {
-                                data.push([
-                                    t.createdAt ? t.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '',
-                                    t.noteNumber,
-                                    t.locationName,
-                                    t.cc,
-                                    t.capacidad
-                                ]);
-                            });
-                            data.push([""]);
-                            data.push(["TOTAL VIAJES:", noteData.totalViajes]);
-                            data.push(["TOTAL VOLUMEN:", noteData.totalM3]);
-                            
-                            const ws = window.XLSX.utils.aoa_to_sheet(data);
-                            window.XLSX.utils.book_append_sheet(wb, ws, "NOTA");
-                            window.XLSX.writeFile(wb, `Nota_${noteData.plate}_${noteData.date}.xlsx`);
-                       }} style={{...styles.button, background:'#10b981', flex:1, fontSize:'0.8rem'}}>EXCEL</button>
                    </div>
               </div>
           </div>
@@ -1122,11 +1480,11 @@ export default function App() {
       <main style={styles.main}>
         {activeTab === 'dashboard' && (
           <div className="no-print-padding">
-            {/* KPI CARDS */}
+            {/* KPI CARDS (SIEMPRE NORMALES) */}
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'15px'}} className="no-print">
-              <div style={styles.kpiCard}><div style={styles.kpiValue}>{logs.length}</div><div style={styles.kpiLabel}>Viajes</div></div>
-              <div style={{...styles.kpiCard, background:'linear-gradient(145deg, #059669, #047857)'}}><div style={styles.kpiValue}>{logs.reduce((a,c)=>a+(c.capacidad||0),0)}</div><div style={styles.kpiLabel}>M³ Total</div></div>
-              <div style={{...styles.kpiCard, background:'linear-gradient(145deg, #7c3aed, #6d28d9)'}}><div style={styles.kpiValue}>{[...new Set(logs.map(l=>l.placas))].length}</div><div style={styles.kpiLabel}>Camiones</div></div>
+              <div style={styles.kpiCard}><div style={styles.kpiValue}>{logs.filter(l=>!l.isEjido).length}</div><div style={styles.kpiLabel}>Viajes</div></div>
+              <div style={{...styles.kpiCard, background:'linear-gradient(145deg, #059669, #047857)'}}><div style={styles.kpiValue}>{logs.filter(l=>!l.isEjido).reduce((a,c)=>a+(c.capacidad||0),0)}</div><div style={styles.kpiLabel}>M³ Total</div></div>
+              <div style={{...styles.kpiCard, background:'linear-gradient(145deg, #7c3aed, #6d28d9)'}}><div style={styles.kpiValue}>{[...new Set(logs.filter(l=>!l.isEjido).map(l=>l.placas))].length}</div><div style={styles.kpiLabel}>Camiones</div></div>
             </div>
 
             {isAdminOrMaster && (
@@ -1177,7 +1535,53 @@ export default function App() {
                   <div style={{flex:1}}><span style={{fontSize:'0.75rem', fontWeight:'bold', color:'#64748b'}}>DESDE:</span><input type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)} style={{...styles.input, padding:'8px'}} /></div>
                   <div style={{flex:1}}><span style={{fontSize:'0.75rem', fontWeight:'bold', color:'#64748b'}}>HASTA:</span><input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)} style={{...styles.input, padding:'8px'}} /></div>
                 </div>
-                <button onClick={handleExportExcel} style={{...styles.button, marginTop:'15px', fontSize:'0.85rem', background:'white', color:'#1e40af', border:'2px solid #1e40af'}}>📥 DESCARGAR REPORTE EXCEL</button>
+                <button onClick={handleExportExcel} style={{...styles.button, marginTop:'15px', fontSize:'0.85rem', background:'white', color:'#1e40af', border:'2px solid #1e40af'}}>📥 DESCARGAR REPORTE EXCEL (COMERCIAL)</button>
+              
+                {/* --- GENERADOR SEMANAL --- */}
+                <div style={{marginTop:'20px', borderTop:'1px solid #bfdbfe', paddingTop:'15px'}}>
+                    <button 
+                        onClick={() => setExpandWeeklyGen(!expandWeeklyGen)} 
+                        style={{...styles.accordionBtn, background:'#f0f9ff', border:'1px solid #bae6fd', color:'#0284c7'}}
+                    >
+                        <span>📅 Reportes Avanzados</span>
+                        <span>{expandWeeklyGen ? '▲' : '▼'}</span>
+                    </button>
+                    
+                    {expandWeeklyGen && (
+                        <div style={{padding:'15px', backgroundColor:'white', borderRadius:'12px', border:'1px solid #bae6fd', marginTop:'10px'}}>
+                            {!isWeeklyUnlocked ? (
+                                <div style={{display:'flex', gap:'10px'}}>
+                                    <input 
+                                        type="password" 
+                                        placeholder="Código de Acceso" 
+                                        value={weeklyPin} 
+                                        onChange={e=>setWeeklyPin(e.target.value)} 
+                                        style={{...styles.input, padding:'10px', flex:1}} 
+                                    />
+                                    <button onClick={handleUnlockWeekly} style={{...styles.button, width:'auto', fontSize:'0.8rem', padding:'0 20px', background:'#0284c7'}}>Desbloquear</button>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p style={{fontSize:'0.8rem', color:'#0284c7', marginBottom:'10px', fontWeight:'bold'}}>Selecciona el rango:</p>
+                                    <div style={{display:'flex', gap:'10px', marginBottom:'15px'}}>
+                                        <div style={{flex:1}}>
+                                            <span style={{fontSize:'0.7rem', fontWeight:'bold', color:'#64748b'}}>INICIO:</span>
+                                            <input type="date" value={weeklyStart} onChange={e => setWeeklyStart(e.target.value)} style={{...styles.input, padding:'8px'}} />
+                                        </div>
+                                        <div style={{flex:1}}>
+                                            <span style={{fontSize:'0.7rem', fontWeight:'bold', color:'#64748b'}}>FIN:</span>
+                                            <input type="date" value={weeklyEnd} onChange={e => setWeeklyEnd(e.target.value)} style={{...styles.input, padding:'8px'}} />
+                                        </div>
+                                    </div>
+                                    <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                                        <button onClick={handleGenerateWeeklyReport} style={{...styles.button, background:'#0ea5e9'}}>📄 REPORTE SEMANAL (Proveedores)</button>
+                                        <button onClick={handleExportEjidoReport} style={{...styles.button, background:'#7e22ce'}}>🚜 REPORTE ESPECIAL EJIDO (Sin Valor)</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
               </div>
             )}
             
@@ -1186,7 +1590,7 @@ export default function App() {
                  <div style={{...styles.card, marginTop:'20px', display:'flex', justifyContent:'space-between', alignItems:'center', background:'linear-gradient(to right, #ecfdf5, #ffffff)', borderColor:'#a7f3d0', padding:'20px'}}>
                      <div>
                          <h3 style={{margin:0, fontSize:'1rem', color:'#065f46'}}>📊 Reporte Diario ({selectedDate})</h3>
-                         <p style={{margin:'4px 0 0 0', fontSize:'0.75rem', color:'#059669'}}>Excel detallado de la jornada actual</p>
+                         <p style={{margin:'4px 0 0 0', fontSize:'0.75rem', color:'#059669'}}>Solo viajes comerciales</p>
                      </div>
                      <button onClick={handleExportDailyExcel} style={{...styles.button, width:'auto', padding:'10px 20px', fontSize:'0.8rem', background:'#10b981', boxShadow:'0 4px 10px rgba(16, 185, 129, 0.3)'}}>DESCARGAR</button>
                  </div>
@@ -1195,24 +1599,55 @@ export default function App() {
             <div style={{...styles.card, padding:0, overflow:'hidden', marginTop:'25px'}} className="print-only">
                <div style={{padding:'16px 20px', background:'#f8fafc', fontWeight:'800', borderBottom:'1px solid #e2e8f0', color:'#334155', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                    <span>📋 REGISTRO DE VIAJES</span>
-                   <span style={{fontSize:'0.75rem', background:'#e2e8f0', padding:'4px 8px', borderRadius:'6px'}}>{logs.length} Total</span>
+                   <span style={{fontSize:'0.75rem', background:'#e2e8f0', padding:'4px 8px', borderRadius:'6px'}}>{filteredLogs.length} Viajes</span>
+               </div>
+               
+               {/* --- SWITCH VISUALIZACIÓN: NORMAL / EJIDO --- */}
+               <div style={{padding:'15px 20px 0 20px', backgroundColor:'white'}}>
+                   <div style={styles.tabSwitch}>
+                       <div 
+                           onClick={() => setViewMode('normal')}
+                           style={{...styles.tabSwitchBtn, ...(viewMode==='normal' ? styles.tabSwitchActive : {color:'#94a3b8'})}}
+                       >
+                           Obras Normales
+                       </div>
+                       <div 
+                           onClick={() => setViewMode('ejido')}
+                           style={{...styles.tabSwitchBtn, ...(viewMode==='ejido' ? styles.tabSwitchActive : {color:'#94a3b8'})}}
+                       >
+                           Registros Ejido
+                       </div>
+                   </div>
+
+                   <div style={styles.inputIconGroup}>
+                       <div style={styles.inputIcon}><Icons.Search/></div>
+                       <input 
+                           style={styles.searchBar} 
+                           placeholder={`Buscar en lista ${viewMode === 'ejido' ? 'Ejido' : 'Normal'}...`} 
+                           value={searchTerm} 
+                           onChange={e => setSearchTerm(e.target.value)} 
+                       />
+                   </div>
                </div>
                
                {/* EMPTY STATE TABLE */}
-               {logs.length === 0 ? (
+               {filteredLogs.length === 0 ? (
                    <div style={{padding:'40px', textAlign:'center', color:'#94a3b8'}}>
                        <div style={{fontSize:'2rem', marginBottom:'10px'}}>📭</div>
-                       <p>No hay viajes registrados para este día.</p>
+                       <p>{viewMode === 'ejido' ? "No hay registros Ejido hoy." : "No hay viajes comerciales hoy."}</p>
                    </div>
                ) : (
                    <div style={{overflowX:'auto'}}>
                     <table style={styles.table}>
                       <thead><tr style={{background:'#f9fafb'}}><th style={styles.th}>#</th><th style={styles.th}>Placa</th><th style={styles.th}>Nota</th><th style={styles.th}>Hora</th><th style={styles.th}>Zona</th><th style={{...styles.th, textAlign:'right'}}>M³</th><th style={styles.th}></th></tr></thead>
                       <tbody>
-                        {logs.map((log, i) => (
-                          <tr key={log.id} style={{display: i < 10 ? 'table-row' : 'none'}} className="print-row">
-                            <td style={styles.td}>{logs.length - i}</td>
-                            <td style={{...styles.td, fontWeight:'bold', color:'#1e293b'}}>{log.placas}</td>
+                        {filteredLogs.map((log, i) => (
+                          <tr key={log.id} style={{display: i < 50 ? 'table-row' : 'none'}} className="print-row">
+                            <td style={styles.td}>{filteredLogs.length - i}</td>
+                            <td style={{...styles.td, fontWeight:'bold', color:'#1e293b'}}>
+                                {log.placas}
+                                {log.isEjido && <span style={styles.ejidoBadge}>EJIDO</span>}
+                            </td>
                             <td style={{...styles.td, color:'#2563eb', fontWeight:'600'}}>{log.noteNumber || '-'}</td>
                             <td style={styles.td}>{log.createdAt && typeof log.createdAt.toLocaleTimeString === 'function' ? log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</td>
                             <td style={styles.td}><span style={{background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px', fontSize:'0.75rem'}}>{log.locationName}</span></td>
@@ -1225,18 +1660,19 @@ export default function App() {
                         ))}
                       </tbody>
                     </table>
+                    {filteredLogs.length > 50 && <div style={{textAlign:'center', padding:'10px', color:'#94a3b8', fontSize:'0.8rem'}}>Mostrando últimos 50 registros...</div>}
                     <style>{`@media print { .print-row { display: table-row !important; } }`}</style>
                    </div>
                )}
             </div>
 
             <div style={{...styles.card, marginTop: '25px', padding:'20px'}}>
-                <h3 style={{margin:'0 0 15px 0', fontSize:'1rem', color:'#64748b'}}>🚛 Flotilla Activa</h3>
+                <h3 style={{margin:'0 0 15px 0', fontSize:'1rem', color:'#64748b'}}>🚛 Flotilla Activa ({viewMode === 'ejido' ? 'Ejido' : 'Normal'})</h3>
                 <div style={{display:'flex', flexWrap:'wrap', gap:'10px'}}>
-                    {[...new Set(logs.map(l=>l.placas))].map(placa => (
+                    {[...new Set(filteredLogs.map(l=>l.placas))].map(placa => (
                         <button key={placa} onClick={() => handleTruckClick(placa)} style={{background:'white', border:'1px solid #cbd5e1', color:'#334155', padding:'8px 12px', borderRadius:'10px', fontSize:'0.85rem', fontWeight:'700', cursor:'pointer', boxShadow:'0 2px 4px rgba(0,0,0,0.05)'}}>{placa}</button>
                     ))}
-                    {logs.length === 0 && <span style={{color:'#94a3b8', fontSize:'0.9rem', fontStyle:'italic'}}>No hay camiones registrados hoy.</span>}
+                    {filteredLogs.length === 0 && <span style={{color:'#94a3b8', fontSize:'0.9rem', fontStyle:'italic'}}>No hay camiones en la lista visible.</span>}
                 </div>
                 {isSupervisorOrHigher && <p style={{fontSize:'0.7rem', color:'#94a3b8', marginTop:'15px', display:'flex', alignItems:'center', gap:'5px'}}><Icons.Eye/> Toca una placa para ver su Nota de Remisión</p>}
             </div>
@@ -1249,11 +1685,34 @@ export default function App() {
           </div>
         )}
 
-        {/* ... (RESTO DE PESTAÑAS IGUALES) ... */}
+        {/* ... (RESTO DE PESTAÑAS) ... */}
         {activeTab === 'scanner' && (
           <div style={{textAlign:'center', padding:'20px'}}>
-             <div style={{...styles.card, marginBottom:'25px', padding:'30px'}}>
-               <h3 style={{marginTop:0, marginBottom:'20px', color:'#1e293b'}}>📍 1. Selecciona Zona</h3>
+             {/* --- TOGGLE MODO EJIDO EN ESCÁNER --- */}
+             {isSupervisorOrHigher && (
+                 <div style={{marginBottom:'20px', display:'flex', justifyContent:'center'}}>
+                     <button 
+                        onClick={handleToggleEjidoMode} 
+                        style={{
+                            ...styles.button, 
+                            background: isEjidoMode ? '#7e22ce' : 'white', 
+                            color: isEjidoMode ? 'white' : '#7e22ce',
+                            border: '2px solid #7e22ce',
+                            boxShadow: isEjidoMode ? '0 10px 20px -5px rgba(126, 34, 206, 0.4)' : 'none',
+                            padding: '10px 20px',
+                            fontSize: '0.8rem',
+                            width: 'auto'
+                        }}
+                     >
+                        {isEjidoMode ? '⚠️ MODO EJIDO ACTIVO (Sin Valor)' : '🔒 ACTIVAR MODO EJIDO'}
+                     </button>
+                 </div>
+             )}
+
+             <div style={{...styles.card, marginBottom:'25px', padding:'30px', borderColor: isEjidoMode ? '#7e22ce' : '#e2e8f0'}}>
+               <h3 style={{marginTop:0, marginBottom:'20px', color: isEjidoMode ? '#7e22ce' : '#1e293b'}}>
+                   {isEjidoMode ? '🚜 Zona Ejido Seleccionada' : '📍 1. Selecciona Zona'}
+               </h3>
                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'15px'}}>
                  {locations.map(l => (
                     <button 
@@ -1261,10 +1720,10 @@ export default function App() {
                         onClick={()=>setSelectedLocationId(l.id)} 
                         style={{
                             padding:'20px', 
-                            border: selectedLocationId===l.id?'2px solid #2563eb':'1px solid #e2e8f0', 
+                            border: selectedLocationId===l.id ? (isEjidoMode ? '2px solid #7e22ce' : '2px solid #2563eb') : '1px solid #e2e8f0', 
                             borderRadius:'16px', 
-                            background: selectedLocationId===l.id?'#eff6ff':'white',
-                            color: selectedLocationId===l.id?'#1e40af':'#334155',
+                            background: selectedLocationId===l.id ? (isEjidoMode ? '#f3e8ff' : '#eff6ff') : 'white',
+                            color: selectedLocationId===l.id ? (isEjidoMode ? '#7e22ce' : '#1e40af') : '#334155',
                             fontWeight: '700',
                             boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
                             transition: 'all 0.2s',
@@ -1283,24 +1742,25 @@ export default function App() {
                     padding:'25px', 
                     fontSize:'1.3rem', 
                     borderRadius:'24px', 
-                    boxShadow:'0 20px 25px -5px rgba(37, 99, 235, 0.3)',
+                    boxShadow: isEjidoMode ? '0 20px 25px -5px rgba(126, 34, 206, 0.4)' : '0 20px 25px -5px rgba(37, 99, 235, 0.3)',
+                    background: isEjidoMode ? 'linear-gradient(135deg, #7e22ce 0%, #581c87 100%)' : '#2563eb',
                     display:'flex',
                     alignItems:'center',
                     justifyContent:'center',
                     gap:'15px'
                 }}
             >
-                <Icons.Camera/> ESCANEAR QR
+                <Icons.Camera/> {isEjidoMode ? 'ESCANEAR (EJIDO)' : 'ESCANEAR QR'}
             </button>
           </div>
         )}
         
-        {/* --- NUEVA PESTAÑA: BUSINESS INTELLIGENCE (BI) --- */}
+        {/* --- PESTAÑA BI --- */}
         {activeTab === 'bi' && (
             <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
                 <div style={{...styles.card, background:'linear-gradient(135deg, #1e293b 0%, #334155 100%)', color:'white', border:'none'}}>
                     <h2 style={{margin:'0 0 10px 0', fontSize:'1.4rem'}}>🧠 Inteligencia de Obra</h2>
-                    <p style={{margin:0, opacity:0.8, fontSize:'0.9rem'}}>Análisis en tiempo real de la productividad.</p>
+                    <p style={{margin:0, opacity:0.8, fontSize:'0.9rem'}}>Análisis comercial en tiempo real (No incluye Ejido).</p>
                 </div>
                 
                 {selectedDate !== getTodayString() ? (
@@ -1361,7 +1821,6 @@ export default function App() {
                         <div style={{display:'flex', gap:'10px', marginBottom:'15px', flexDirection: 'column'}}>
                           <div style={{display:'flex', gap:'10px'}}>
                               <input style={{...styles.input, flex:2}} placeholder="Nombre" value={newUser.name} onChange={e=>setNewUser({...newUser, name:e.target.value})} />
-                              {/* PIN SEGURO: Type Password */}
                               <input style={{...styles.input, flex:1}} type="password" placeholder="PIN (6+)" value={newUser.pin} onChange={e=>setNewUser({...newUser, pin:e.target.value})} />
                           </div>
                           <select style={styles.select} value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})}>
@@ -1375,10 +1834,8 @@ export default function App() {
 
                         <div style={{marginTop:'20px', borderTop:'1px solid #bfdbfe', paddingTop:'15px'}}>
                           <p style={{fontSize:'0.8rem', color:'#0369a1', fontStyle:'italic'}}>* Por seguridad PRO-GOLD, la lista de usuarios ya no se descarga visiblemente. Solo puedes agregar o borrar si conoces el ID.</p>
-                          {/* LISTADO LIMITADO SOLO SI ES MASTER PARA BORRAR */}
                           {users.map(u => (
                             <div key={u.id} style={{display:'flex', justifyContent:'space-between', padding:'10px 0', fontSize:'0.9rem', borderBottom:'1px dashed #cbd5e1'}}>
-                              {/* PIN OCULTO EN LISTA */}
                               <span style={{fontWeight:'500'}}>{u.name} <span style={{fontSize:'0.75rem', background:'#e0f2fe', color:'#0369a1', padding:'2px 6px', borderRadius:'4px'}}>{u.role}</span></span>
                               <button onClick={()=>deleteItem('system_users', u.id)} style={{border:'none', background:'#fef2f2', color:'#ef4444', borderRadius:'6px', padding:'4px 8px', cursor:'pointer'}}>Eliminar</button>
                             </div>
