@@ -22,23 +22,31 @@ import {
   writeBatch,
   query,
   where,
-  limit
+  limit,
+  Timestamp
 } from 'firebase/firestore';
+
+// --- CONFIGURACIÓN DE IDENTIDAD Y LOGO ---
+// INSTRUCCIÓN: Sube tu logo a Hostinger (public_html) y pega aquí el enlace exacto.
+// Ejemplo: "https://www.cidelt.com/images/logo-cidelt.png"
+const COMPANY_LOGO_URL = "https://www.cidelt.com/img/logo-cidelt.png"; 
 
 // --- CONFIGURACIÓN DE SEGURIDAD (Centralizada) ---
 const SECURITY_CONFIG = {
   PRICE_CHANGE_PIN: "20202025",
   WEEKLY_REPORT_PIN: "212232",
-  EJIDO_MODE_PIN: "707070", // NUEVO PIN PARA EJIDO
-  MIN_PIN_LENGTH: 6
+  EJIDO_MODE_PIN: "707070", 
+  MIN_PIN_LENGTH: 6,
+  MIN_CYCLE_TIME_MINUTES: 15,
+  TRIAL_DAYS: 3
 };
 
 // --- ESTILOS ---
 const styles = {
   container: { fontFamily: "'Inter', system-ui, -apple-system, sans-serif", backgroundColor: '#f1f5f9', minHeight: '100vh', paddingBottom: '120px', color: '#334155', position: 'relative' },
   header: { background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)', color: 'white', padding: '16px 20px', position: 'sticky', top: 0, zIndex: 50, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', borderBottom: '1px solid rgba(255,255,255,0.1)' },
-  // Header especial para modo Ejido
   headerEjido: { background: 'linear-gradient(135deg, #581c87 0%, #3b0764 100%)' }, 
+  headerProvider: { background: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)' },
   title: { fontSize: '1.25rem', fontWeight: '800', margin: 0, letterSpacing: '-0.03em', textTransform: 'uppercase', background: 'linear-gradient(to right, #ffffff, #fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
   subtitle: { fontSize: '0.75rem', color: '#cbd5e1', margin: 0, fontFamily: "'JetBrains Mono', monospace", marginTop: '2px' },
   main: { maxWidth: '900px', margin: '0 auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
@@ -55,7 +63,7 @@ const styles = {
   fab: { width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', marginTop: '-30px', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.4)', border: '4px solid #f8fafc', cursor: 'pointer', transition: 'transform 0.1s' },
   input: { width: '100%', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '1rem', backgroundColor: '#f8fafc', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s', ':focus': { borderColor: '#3b82f6', boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)' } },
   button: { width: '100%', padding: '16px', borderRadius: '14px', border: 'none', fontWeight: '700', cursor: 'pointer', backgroundColor: '#2563eb', color: 'white', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.9rem' },
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)', overflowY: 'auto' },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.95)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)', overflowY: 'auto' },
   modalContent: { backgroundColor: 'white', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '380px', textAlign: 'center', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
   modalContentOficio: { backgroundColor: 'white', borderRadius: '8px', padding: '40px', width: '100%', maxWidth: '800px', minHeight: '80vh', textAlign: 'left', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
   noteBlock: { backgroundColor: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(251, 191, 36, 0.1)' },
@@ -72,18 +80,27 @@ const styles = {
   inputIcon: { position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' },
   inputWithIcon: { paddingLeft: '45px' },
   searchBar: { width: '100%', padding: '12px 16px 12px 40px', borderRadius: '12px', border: '1px solid #cbd5e1', fontSize: '0.9rem', backgroundColor: 'white', marginBottom: '15px', outline:'none' },
-  // ESTILOS BI (Agregados para la gráfica)
   chartContainer: { height: '220px', display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '20px 0', overflowX: 'auto' },
   barGroup: { display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '40px', position: 'relative' },
   bar: { width: '100%', borderRadius: '4px 4px 0 0', transition: 'height 0.5s ease', minHeight: '4px', display:'flex', alignItems:'flex-end', justifyContent:'center' },
   barLabel: { fontSize: '0.7rem', color: '#64748b', marginTop: '8px', textAlign:'center', fontWeight:'600' },
   barValue: { fontSize: '0.7rem', color: '#1e293b', fontWeight:'700', marginBottom:'4px', background:'rgba(255,255,255,0.8)', padding:'2px 4px', borderRadius:'4px' },
   syncBanner: { background: '#f97316', color: 'white', padding: '8px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 'bold', position: 'fixed', top: '60px', left: 0, right: 0, zIndex: 49 },
-  // Badge de Ejido
   ejidoBadge: { backgroundColor: '#7e22ce', color:'white', fontSize:'0.7rem', padding:'2px 6px', borderRadius:'4px', fontWeight:'bold', marginLeft:'5px' },
   tabSwitch: { display:'flex', backgroundColor:'#e2e8f0', borderRadius:'12px', padding:'4px', marginBottom:'20px' },
   tabSwitchBtn: { flex:1, padding:'8px', textAlign:'center', borderRadius:'10px', fontSize:'0.8rem', fontWeight:'bold', cursor:'pointer', transition:'all 0.2s' },
-  tabSwitchActive: { backgroundColor:'white', color:'#1e293b', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' }
+  tabSwitchActive: { backgroundColor:'white', color:'#1e293b', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
+  progressBarContainer: { height:'10px', width:'100%', backgroundColor:'#e2e8f0', borderRadius:'5px', marginTop:'8px', overflow:'hidden' },
+  progressBarFill: { height:'100%', transition:'width 0.5s ease' },
+  timeTag: { fontSize:'0.7rem', fontWeight:'700', padding:'2px 6px', borderRadius:'4px', marginLeft:'8px' },
+  timeTagNormal: { backgroundColor:'#dcfce7', color:'#166534' },
+  timeTagSuspicious: { backgroundColor:'#fee2e2', color:'#991b1b', border:'1px solid #fecaca' },
+  lockedScreen: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', padding: '20px', textAlign: 'center' },
+  trialBanner: { background: '#2563eb', color: 'white', padding: '8px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 'bold', position: 'fixed', top: '0', left: 0, right: 0, zIndex: 100, display: 'flex', justifyContent: 'center', gap: '10px' },
+  // NUEVO: ESTILO SPLASH SCREEN
+  splashScreen: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#0f172a', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
+  // CAMBIO EN LOGO: Ahora usamos Imagen en vez de SVG
+  splashLogoContainer: { width: '200px', height: '100px', display:'flex', alignItems:'center', justifyContent:'center' }
 };
 
 const printStyles = `
@@ -129,7 +146,11 @@ const Icons = {
   User: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
   Key: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
   Chart: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-  Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  Time: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+  // LOGO REAL (USANDO IMAGEN)
+  Logo: () => <img src={COMPANY_LOGO_URL} alt="CIDELT Logo" style={{width: '100%', height: '100%', objectFit: 'contain'}} onError={(e) => { e.target.onerror = null; e.target.src="https://via.placeholder.com/200x80?text=LOGO+ERROR"; }} />
 };
 
 let firebaseConfig;
@@ -156,10 +177,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 try { 
-  enableIndexedDbPersistence(db).catch(err => {
-    // Silenciar error si falla (común en iframes o modo incógnito)
-    console.log("Persistencia no disponible en este entorno");
-  }); 
+  enableIndexedDbPersistence(db).catch(err => {}); 
 } catch(e){}
 
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'controlexcavacion-default';
@@ -170,7 +188,6 @@ const getTodayString = () => { const d = new Date(); return `${d.getFullYear()}-
 const getLongDateString = () => { const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }; return new Date().toLocaleDateString('es-MX', options); };
 const playBeep = () => { try { const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); audio.volume = 0.5; audio.play().catch(()=>{}); if(navigator.vibrate) navigator.vibrate(200); } catch(e){} };
 
-// Helper for currency - Safe wrapper
 const fmtMoney = (n) => {
   try {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n || 0);
@@ -179,9 +196,6 @@ const fmtMoney = (n) => {
   }
 };
 
-// --- LOGICA FINANCIERA BLINDADA ---
-// Obtiene el precio HISTÓRICO del viaje. Si el viaje guardó un precio (aunque sea 0), lo respeta.
-// Solo usa el precio actual si el registro es muy antiguo y no tenía el campo.
 const getLogPrice = (log, currentGlobalPrice) => {
     if (log.priceSnapshot !== undefined && log.priceSnapshot !== null) {
         return log.priceSnapshot;
@@ -269,7 +283,6 @@ const NativeScanner = ({ onScan, onCancel }) => {
   );
 };
 
-// --- COMPONENTES BI DASHBOARD (Inteligencia de Negocios) MEJORADO ---
 const ChartBar = ({ data, labelKey, valueKey, color = '#3b82f6', title, emptyMsg = "Sin datos en este rango" }) => {
     if (!data || data.length === 0 || data.every(d => d[valueKey] === 0)) {
         return (
@@ -314,13 +327,12 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
-  const [processingScan, setProcessingScan] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   const [pendingWrites, setPendingWrites] = useState(false);
 
   const [trucks, setTrucks] = useState([]);
-  const [logs, setLogs] = useState([]); // TODOS LOS LOGS (Standard + Ejido)
+  const [logs, setLogs] = useState([]); 
   const [locations, setLocations] = useState([]);
   const [users, setUsers] = useState([]);
   const [dailyNote, setDailyNote] = useState("");
@@ -328,19 +340,17 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState("");
   
-  // -- BUSCADOR --
   const [searchTerm, setSearchTerm] = useState("");
-  // -- VISTA DASHBOARD (Normal vs Ejido) --
-  const [viewMode, setViewMode] = useState('normal'); // 'normal' | 'ejido'
-  // -- MODO GRABACIÓN (Scanner) --
+  const [viewMode, setViewMode] = useState('normal'); 
   const [isEjidoMode, setIsEjidoMode] = useState(false);
   
   const [newTruck, setNewTruck] = useState({ placas: '', capacidad: '', agrupacion: '' });
-  const [newLocation, setNewLocation] = useState({ name: '', cc: '' });
+  const [newLocation, setNewLocation] = useState({ name: '', cc: '', dailyGoal: '' });
   const [newUser, setNewUser] = useState({ name: '', pin: '', role: 'checker' });
   
   const [showQRModal, setShowQRModal] = useState(null);
   const [scanSuccess, setScanSuccess] = useState(null);
+  const [processingScan, setProcessingScan] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteInput, setNoteInput] = useState("");
   const [pendingScan, setPendingScan] = useState(null);
@@ -374,12 +384,16 @@ export default function App() {
   const [showNotePreview, setShowNotePreview] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
 
+  const [licenseStatus, setLicenseStatus] = useState('loading'); 
+  const [daysRemaining, setDaysRemaining] = useState(0);
+
   useEffect(() => {
-    document.title = "Control Pro GOLD";
-    let meta = document.createElement('meta');
-    meta.name = "apple-mobile-web-app-capable";
-    meta.content = "yes";
-    document.getElementsByTagName('head')[0].appendChild(meta);
+    document.title = "CIDELT | Control Pro GOLD";
+    const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    link.type = 'image/x-icon';
+    link.rel = 'shortcut icon';
+    link.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏗️</text></svg>";
+    document.getElementsByTagName('head')[0].appendChild(link);
   }, []);
 
   const isAdminOrMaster = ['masteradmin', 'admin'].includes(currentAuth.role);
@@ -452,6 +466,72 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
+
+    const checkLicense = async () => {
+        const licenseRef = doc(db, collectionPath, "settings", "license");
+        
+        try {
+            const snap = await getDoc(licenseRef);
+            let startDate;
+
+            if (snap.exists()) {
+                const data = snap.data();
+                startDate = data.startDate.toDate();
+            } else {
+                const now = new Date();
+                await setDoc(licenseRef, {
+                    startDate: serverTimestamp(), 
+                    status: 'trial',
+                    version: '2.0'
+                });
+                startDate = now;
+            }
+
+            const now = new Date();
+            const diffTime = Math.abs(now - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            const remaining = SECURITY_CONFIG.TRIAL_DAYS - diffDays;
+
+            if (diffDays > SECURITY_CONFIG.TRIAL_DAYS) {
+                setLicenseStatus('expired');
+                setDaysRemaining(0);
+            } else {
+                setLicenseStatus('valid');
+                setDaysRemaining(remaining >= 0 ? remaining : 0);
+            }
+
+        } catch (e) {
+            setLicenseStatus('valid'); 
+        }
+    };
+
+    checkLicense();
+  }, [user]);
+
+  const processLogsWithTime = (rawLogs) => {
+      const sortedLogs = [...rawLogs].sort((a,b) => b.createdAt - a.createdAt);
+      const truckGroups = {};
+      sortedLogs.forEach(log => {
+          if(!truckGroups[log.truckId]) truckGroups[log.truckId] = [];
+          truckGroups[log.truckId].push(log);
+      });
+
+      const logsWithDelta = sortedLogs.map(log => {
+          const myGroup = truckGroups[log.truckId];
+          const myIdx = myGroup.findIndex(l => l.id === log.id);
+          const prevLog = myGroup[myIdx + 1];
+          let timeDelta = null;
+          if (prevLog && prevLog.createdAt) {
+              const diffMs = log.createdAt - prevLog.createdAt;
+              timeDelta = Math.floor(diffMs / 60000); 
+          }
+          return { ...log, timeDelta };
+      });
+      return logsWithDelta;
+  };
+
+  useEffect(() => {
+    if (!user || licenseStatus !== 'valid') return;
     
     let unsubUsers = () => {};
     if (isMaster) {
@@ -483,8 +563,8 @@ export default function App() {
               isLocal: d.metadata.hasPendingWrites 
           });
       });
-      data.sort((a, b) => b.createdAt - a.createdAt);
-      setLogs(data);
+      const processedData = processLogsWithTime(data);
+      setLogs(processedData);
       setPendingWrites(pendingCount > 0);
     }, e => console.log(e));
 
@@ -493,14 +573,10 @@ export default function App() {
     }).catch(e=>{});
     
     return () => { unsubTrucks(); unsubLocs(); unsubUsers(); unsubLogs(); }
-  }, [user, selectedDate, isMaster]); 
+  }, [user, selectedDate, isMaster, licenseStatus]); 
 
-  // --- FILTERED LOGS HELPER ---
   const getFilteredLogs = () => {
-      // 1. Filtrar por Modo Visualización (Normal o Ejido)
       const visibleLogs = logs.filter(l => viewMode === 'ejido' ? l.isEjido : !l.isEjido);
-
-      // 2. Filtrar por Búsqueda (si existe)
       if (!searchTerm) return visibleLogs;
       const lowerSearch = searchTerm.toLowerCase();
       return visibleLogs.filter(log => 
@@ -508,6 +584,17 @@ export default function App() {
           (log.locationName && log.locationName.toLowerCase().includes(lowerSearch)) ||
           (log.noteNumber && log.noteNumber.toLowerCase().includes(lowerSearch))
       );
+  };
+
+  const getLocationProgress = (locId) => {
+      const loc = locations.find(l => l.id === locId);
+      if (!loc || !loc.dailyGoal) return null;
+      
+      const locLogs = logs.filter(l => l.locationName === loc.name && (isEjidoMode ? l.isEjido : !l.isEjido));
+      const currentVol = locLogs.reduce((acc, curr) => acc + (curr.capacidad || 0), 0);
+      const goal = parseFloat(loc.dailyGoal);
+      const pct = Math.min((currentVol / goal) * 100, 100);
+      return { currentVol, goal, pct };
   };
 
   const handleLogin = async () => {
@@ -522,9 +609,7 @@ export default function App() {
             where("pin", "==", authInput.pin.trim()),
             limit(1)
         );
-        
         const snapshot = await getDocs(q);
-        
         if (!snapshot.empty) {
             const validUser = snapshot.docs[0].data();
             const s = { name: validUser.name, role: validUser.role, isAuthenticated: true };
@@ -535,12 +620,7 @@ export default function App() {
             alert("Credenciales incorrectas.");
         }
     } catch (e) {
-        console.error(e);
-        if (e.code === 'failed-precondition') {
-             alert("⚠️ El sistema se está optimizando (Índices). Intenta de nuevo en unos minutos o contacta al admin.");
-        } else {
-             alert("Error de autenticación.");
-        }
+        alert("Error de autenticación.");
     }
     setLoading(false);
     setAuthInput({ user: '', pin: '' });
@@ -577,21 +657,15 @@ export default function App() {
 
   const handleTruckClick = (plate) => {
       if (isSupervisorOrHigher) {
-          // Nota: Solo mostrar viajes del modo actual
           const trips = logs.filter(l => l.placas === plate && (viewMode === 'ejido' ? l.isEjido : !l.isEjido));
           if (trips.length === 0) return alert("No hay viajes visibles para esta placa hoy en este modo.");
           
           const totalM3 = trips.reduce((acc, curr) => acc + (curr.capacidad || 0), 0);
-          
-          // BLINDAJE FINANCIERO: USAR PRECIO HISTÓRICO DE CADA VIAJE
           const totalImporte = trips.reduce((acc, curr) => {
               const histPrice = getLogPrice(curr, pricePerM3);
               return acc + ((curr.capacidad || 0) * histPrice);
           }, 0); 
-          
-          // BLINDAJE PROVEEDOR: USAR EL DEL PRIMER LOG ENCONTRADO (HISTÓRICO)
           const truckInfo = trips[0] || { agrupacion: 'S/N' };
-          
           setNoteData({ 
               date: selectedDate, 
               plate: plate, 
@@ -625,10 +699,8 @@ export default function App() {
 
   const savePrice = async () => {
     if (!isMaster) return alert("⛔ Solo MasterAdmin.");
-    
     const confirmPin = prompt("⚠️ SEGURIDAD: Ingresa el PIN nuevamente para confirmar el cambio de precio:");
     if(confirmPin !== SECURITY_CONFIG.PRICE_CHANGE_PIN) return alert("PIN Incorrecto. Cambio cancelado.");
-
     try { 
         await setDoc(doc(db, collectionPath, "settings", "general"), { pricePerM3: Number(pricePerM3) }, { merge: true }); 
         alert("✅ Precio actualizado correctamente."); 
@@ -637,15 +709,12 @@ export default function App() {
     } catch (e) { alert("Error: " + e.message); }
   };
 
-  // Helper function to build the bottom summary matrix for daily reports
   const appendDailySummaryToSheet = (sheetData, logsToSummarize, currentPrice) => {
      const summaryTree = {};
      logsToSummarize.forEach(log => {
          const prov = log.agrupacion || "SIN PROVEEDOR";
          const ccName = `${log.locationName || 'Zona'} (${log.cc || 'S/N'})`;
-         // BLINDAJE FINANCIERO:
          const p = getLogPrice(log, currentPrice);
-         
          const m3 = log.capacidad || 0;
          const money = m3 * p;
          const note = log.noteNumber || "";
@@ -704,8 +773,6 @@ export default function App() {
     if (!isSupervisorOrHigher) return alert("Permisos insuficientes");
     if (!window.XLSX) return alert("Cargando Excel...");
     const XLSX_LIB = window.XLSX;
-    
-    // FILTRAR SOLO NORMALES (NO EJIDO)
     const dailyLogs = logs.filter(l => !l.isEjido);
 
     try {
@@ -718,19 +785,15 @@ export default function App() {
         if (dailyNote) { sheetData.push(["OBSERVACIONES DEL DÍA:", dailyNote]); sheetData.push([""]); }
         sheetData.push(["No.", "HORA", "PLACAS", "PROVEEDOR", "M3", "PRECIO APL.", "ZONA", "CC", "NOTA FÍSICA", "CAPTURISTA"]);
         dailyLogs.forEach((log, index) => {
-            // BLINDAJE FINANCIERO
             const priceUsed = getLogPrice(log, pricePerM3);
             const capturista = log.recordedBy || 'Desconocido';
             sheetData.push([index + 1, log.createdAt ? log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '', log.placas, log.agrupacion, log.capacidad, fmtMoney(priceUsed), log.locationName, log.cc, log.noteNumber || '', capturista]);
         });
-        
         sheetData.push([""]);
         const totalM3 = dailyLogs.reduce((acc, curr) => acc + (curr.capacidad || 0), 0);
         sheetData.push(["TOTAL VIAJES:", dailyLogs.length]);
         sheetData.push(["TOTAL VOLUMEN (m3):", totalM3]);
-
         appendDailySummaryToSheet(sheetData, dailyLogs, pricePerM3);
-
         const ws = XLSX_LIB.utils.aoa_to_sheet(sheetData);
         XLSX_LIB.utils.book_append_sheet(wb, ws, "Reporte Diario");
         XLSX_LIB.writeFile(wb, `Reporte_Diario_${selectedDate}.xlsx`);
@@ -749,13 +812,8 @@ export default function App() {
             where("dateString", "<=", weeklyEnd)
           );
           const snap = await getDocs(q);
-          // FILTRAR LOGS NORMALES SOLAMENTE
-          const logsData = snap.docs
-                .map(d => ({...d.data(), id:d.id, createdAt: d.data().createdAt?.toDate() }))
-                .filter(l => !l.isEjido);
-          
+          const logsData = snap.docs.map(d => ({...d.data(), id:d.id, createdAt: d.data().createdAt?.toDate() })).filter(l => !l.isEjido);
           if(logsData.length === 0) { setLoading(false); return alert("No hay datos en este rango"); }
-
           const wb = window.XLSX.utils.book_new();
           const providers = {};
           logsData.forEach(l => {
@@ -763,129 +821,85 @@ export default function App() {
               if(!providers[p]) providers[p] = [];
               providers[p].push(l);
           });
-
           for (const provName of Object.keys(providers)) {
               const provLogs = providers[provName];
               const sheetRows = [];
-              
               sheetRows.push(["REPORTE DE ACARREOS"]);
               sheetRows.push([`PROVEEDOR: ${provName}`]);
               sheetRows.push([`PERIODO: ${weeklyStart} al ${weeklyEnd}`]);
               sheetRows.push([""]);
-
               const truckGroups = {};
               provLogs.forEach(l => {
                   if(!truckGroups[l.placas]) truckGroups[l.placas] = [];
                   truckGroups[l.placas].push(l);
               });
-
               const sortedPlates = Object.keys(truckGroups).sort((a, b) => {
                   const capA = truckGroups[a][0]?.capacidad || 0;
                   const capB = truckGroups[b][0]?.capacidad || 0;
                   if (capA !== capB) return capA - capB; 
                   return a.localeCompare(b); 
               });
-
               let grandTotalTrips = 0;
               let grandTotalMoney = 0;
-              
               const volumeStats = {};
               const cecoStats = {};
-
               for(const plate of sortedPlates) {
                   const truckLogs = truckGroups[plate];
                   const capacity = truckLogs[0].capacidad || 0;
-
                   sheetRows.push([`NUMERO DE PLACA: ${plate}`, `CAPACIDAD: ${capacity} m3`]);
                   sheetRows.push(["#", "FECHA", "FOLIO/NOTA", "CECO", "ZONA", "VIAJES", "COSTO X VIAJE", "IMPORTE TOTAL"]);
-
                   const tripGroups = {};
                   truckLogs.forEach(l => {
                       const date = l.dateString;
                       const cc = l.cc || "S/N";
                       const zone = l.locationName || "S/N";
-                      // BLINDAJE FINANCIERO
                       const price = getLogPrice(l, pricePerM3);
-                      
                       const key = `${date}|${cc}|${zone}|${price}`;
-                      
-                      if(!tripGroups[key]) tripGroups[key] = { 
-                          date, cc, zone, price, 
-                          count: 0, 
-                          notes: [], 
-                          totalM3: 0 
-                      };
+                      if(!tripGroups[key]) tripGroups[key] = { date, cc, zone, price, count: 0, notes: [], totalM3: 0 };
                       tripGroups[key].count++;
                       tripGroups[key].notes.push(l.noteNumber || "");
                       tripGroups[key].totalM3 += (l.capacidad || 0);
-
                       const capKey = l.capacidad || 0;
                       if(!volumeStats[capKey]) volumeStats[capKey] = { count: 0, money: 0 };
                       volumeStats[capKey].count++;
                       volumeStats[capKey].money += (l.capacidad * price);
-
                       if(!cecoStats[cc]) cecoStats[cc] = { count: 0, money: 0 };
                       cecoStats[cc].count++;
                       cecoStats[cc].money += (l.capacidad * price);
                   });
-
                   let truckSubtotalMoney = 0;
                   let truckSubtotalTrips = 0;
                   let itemCounter = 1;
-
                   Object.values(tripGroups).sort((a,b) => a.date.localeCompare(b.date)).forEach( group => {
                       const totalImporte = group.totalM3 * group.price;
                       const unitCost = totalImporte / group.count;
                       const uniqueNotes = [...new Set(group.notes)].filter(n => n && n.trim() !== "");
-
-                      sheetRows.push([
-                          itemCounter++,
-                          group.date,
-                          uniqueNotes.join(", "), 
-                          group.cc,
-                          group.zone,
-                          group.count,
-                          fmtMoney(unitCost),
-                          fmtMoney(totalImporte)
-                      ]);
-
+                      sheetRows.push([itemCounter++, group.date, uniqueNotes.join(", "), group.cc, group.zone, group.count, fmtMoney(unitCost), fmtMoney(totalImporte)]);
                       truckSubtotalMoney += totalImporte;
                       truckSubtotalTrips += group.count;
                   });
-
                   sheetRows.push(["", "", "", "", "SUBTOTAL:", truckSubtotalTrips, "", fmtMoney(truckSubtotalMoney)]);
                   sheetRows.push([""]); 
-                  
                   grandTotalTrips += truckSubtotalTrips;
                   grandTotalMoney += truckSubtotalMoney;
               }
-
               sheetRows.push([""]);
               sheetRows.push(["============================================================"]);
               sheetRows.push(["RESUMEN DE VOLUMETRÍA"]);
               sheetRows.push(["#", "DESCRIPCIÓN (m3)", "NUMERO DE VIAJES", "IMPORTE TOTAL"]);
-              
               let volTotalMoney = 0;
               let volTotalTrips = 0;
               let volCounter = 1;
-
               Object.keys(volumeStats).sort((a,b)=>b-a).forEach(cap => {
                   const s = volumeStats[cap];
-                  sheetRows.push([
-                      volCounter++,
-                      `UNIDADES DE ${cap} m3`,
-                      s.count,
-                      fmtMoney(s.money)
-                  ]);
+                  sheetRows.push([volCounter++, `UNIDADES DE ${cap} m3`, s.count, fmtMoney(s.money)]);
                   volTotalMoney += s.money;
                   volTotalTrips += s.count;
               });
               sheetRows.push(["", "TOTALES", volTotalTrips, fmtMoney(volTotalMoney)]);
-
               sheetRows.push([""]);
               sheetRows.push(["CONTABILIDAD (POR CECO)"]);
               sheetRows.push(["CENTRO DE COSTO", "VIAJES", "TOTAL"]);
-              
               let cecoTotalMoney = 0;
               let cecoTotalTrips = 0;
               Object.keys(cecoStats).sort().forEach(cc => {
@@ -895,14 +909,11 @@ export default function App() {
                   cecoTotalTrips += s.count;
               });
               sheetRows.push(["SUMA DE TOTALES", cecoTotalTrips, fmtMoney(cecoTotalMoney)]);
-
               const ws = window.XLSX.utils.aoa_to_sheet(sheetRows);
               const safeName = provName.replace(/[\/\\\?\*\[\]]/g, "").substring(0, 30) || "Prov";
               window.XLSX.utils.book_append_sheet(wb, ws, safeName);
           }
-
           window.XLSX.writeFile(wb, `Semana_${weeklyStart}_${weeklyEnd}.xlsx`);
-
       } catch(e) {
           console.error(e);
           alert("Error al generar: " + e.message);
@@ -923,10 +934,7 @@ export default function App() {
         where("dateString", "<=", exportEndDate)
       );
       const snapshot = await getDocs(q);
-      // FILTRAR LOGS NORMALES SOLAMENTE
-      const data = snapshot.docs
-        .map(d => ({ ...d.data(), createdAt: d.data().createdAt?.toDate() }))
-        .filter(l => !l.isEjido);
+      const data = snapshot.docs.map(d => ({ ...d.data(), createdAt: d.data().createdAt?.toDate() })).filter(l => !l.isEjido);
       
       if (data.length === 0) { setLoading(false); return alert("Sin datos en el rango seleccionado"); }
 
@@ -937,7 +945,6 @@ export default function App() {
 
       data.forEach(log => {
           totalM3 += (log.capacidad || 0);
-          // BLINDAJE FINANCIERO
           const p = getLogPrice(log, pricePerM3);
           totalImport += (log.capacidad || 0) * p;
       });
@@ -966,9 +973,7 @@ export default function App() {
       let grandTotalMoney = 0;
 
       data.forEach(log => {
-        // BLINDAJE: Usar proveedor histórico
         const prov = log.agrupacion || "SIN ASIGNAR";
-        // BLINDAJE: Usar precio histórico
         const p = getLogPrice(log, pricePerM3);
         const m3 = log.capacidad || 0;
         const money = m3 * p;
@@ -1092,7 +1097,6 @@ export default function App() {
         ];
 
         dayLogs.forEach((log, idx) => {
-            // BLINDAJE FINANCIERO
             const p = getLogPrice(log, pricePerM3);
             const capturista = log.recordedBy || 'Desconocido';
             daySheetData.push([
@@ -1111,7 +1115,6 @@ export default function App() {
         });
 
         appendDailySummaryToSheet(daySheetData, dayLogs, pricePerM3);
-        
         const wsDay = XLSX_LIB.utils.aoa_to_sheet(daySheetData);
         XLSX_LIB.utils.book_append_sheet(wb, wsDay, day);
       });
@@ -1122,7 +1125,6 @@ export default function App() {
     setLoading(false);
   };
 
-  // --- REPORTE ESPECIAL EJIDO ---
   const handleExportEjidoReport = async () => {
       if (!isSupervisorOrHigher) return alert("Permisos insuficientes");
       if (!window.XLSX) return alert("Cargando Excel...");
@@ -1135,10 +1137,7 @@ export default function App() {
             where("dateString", "<=", exportEndDate)
           );
           const snap = await getDocs(q);
-          // FILTRAR SOLO EJIDO
-          const data = snap.docs
-            .map(d => ({ ...d.data(), createdAt: d.data().createdAt?.toDate() }))
-            .filter(l => l.isEjido);
+          const data = snap.docs.map(d => ({ ...d.data(), createdAt: d.data().createdAt?.toDate() })).filter(l => l.isEjido);
           
           if (data.length === 0) { setLoading(false); return alert("Sin viajes Ejido en el rango seleccionado."); }
 
@@ -1192,9 +1191,8 @@ export default function App() {
         locationName: location.name, 
         cc: location.cc,
         noteNumber: noteNumber,
-        // LOGICA EJIDO
         isEjido: isEjidoMode,
-        priceSnapshot: isEjidoMode ? 0 : Number(pricePerM3), // $0 si es ejido
+        priceSnapshot: isEjidoMode ? 0 : Number(pricePerM3),
         createdAt: serverTimestamp(),
         dateString: getTodayString(),
         recordedBy: currentAuth.name
@@ -1228,7 +1226,7 @@ export default function App() {
   const cancelNote = () => { setShowNoteModal(false); setPendingScan(null); setNoteInput(""); };
   const handleEditLog = async () => { if(!editingLog) return; try { await updateDoc(doc(db, collectionPath, "logs", editingLog.id), { noteNumber: editingLog.noteNumber, locationName: editingLog.locationName }); setEditingLog(null); } catch(e) { alert("Error: " + e.message); } };
   const handleSaveNote = async () => { await setDoc(doc(db, collectionPath, "daily_notes", selectedDate), { text: dailyNote }); alert("✅ Nota guardada"); };
-  const handleAddLocation = async () => { if (!isSupervisorOrHigher) return alert("Permisos insuficientes"); if(!newLocation.name) return alert("Faltan datos"); await addDoc(collection(db, collectionPath, "locations"), newLocation); setNewLocation({ name: '', cc: '' }); };
+  const handleAddLocation = async () => { if (!isSupervisorOrHigher) return alert("Permisos insuficientes"); if(!newLocation.name) return alert("Faltan datos"); await addDoc(collection(db, collectionPath, "locations"), newLocation); setNewLocation({ name: '', cc: '', dailyGoal: '' }); };
   
   const handleAddTruck = async () => { 
       if (!isAdminOrMaster) return alert("Solo Admin/Master"); 
@@ -1253,7 +1251,7 @@ export default function App() {
       if (!isMaster) return alert("⛔ Solo MasterAdmin."); 
       if (!newUser.name || !newUser.pin) return alert("Faltan datos"); 
       
-      if (newUser.pin.length < SECURITY_CONFIG.MIN_PIN_LENGTH) return alert(`⚠️ Seguridad: El PIN debe tener al menos ${SECURITY_CONFIG.MIN_PIN_LENGTH} dígitos.`);
+      if (newUser.pin.length < 6) return alert("⚠️ Seguridad: El PIN debe tener al menos 6 dígitos.");
 
       const q = query(collection(db, collectionPath, "system_users"), where("name", "==", newUser.name.trim()));
       const snap = await getDocs(q);
@@ -1266,9 +1264,7 @@ export default function App() {
   };
 
   const deleteItem = async (coll, id) => { 
-      if (!isAdminOrMaster && coll !== 'system_users') return alert("⛔ Solo Admin/Master.");
-      if (coll === 'system_users' && !isMaster) return alert("⛔ Solo MasterAdmin puede eliminar usuarios.");
-      
+      if (!isAdminOrMaster) return;
       if(confirm("¿Eliminar?")) await deleteDoc(doc(db, collectionPath, coll, id)); 
   };
   
@@ -1294,21 +1290,24 @@ export default function App() {
     window.location.reload();
   };
 
-  const getBiData = () => {
+const getBiData = () => {
       try {
-        const sourceLogs = logs.filter(l => !l.isEjido); // BI SOLO CUENTA NORMALES
-        const hourlyCounts = Array(13).fill(0).map((_,i) => ({ hour: i+7, count: 0 })); 
+        const sourceLogs = logs.filter(l => !l.isEjido);
+        const hourlyCounts = Array(13).fill(0).map((_,i) => ({ hour: i+7, count: 0 }));
+        
         sourceLogs.forEach(l => {
+            // Protección contra fechas inválidas
             if(!l.createdAt || typeof l.createdAt.getHours !== 'function') return;
             const h = l.createdAt.getHours();
             if (h >= 7 && h <= 19) hourlyCounts[h-7].count++;
         });
-        
+
         const provMap = {};
         sourceLogs.forEach(l => {
             const p = l.agrupacion || 'S/N';
             provMap[p] = (provMap[p] || 0) + (l.capacidad || 0);
         });
+
         const providerData = Object.keys(provMap).map(k => ({ name: k, m3: provMap[k] })).sort((a,b) => b.m3 - a.m3);
         const totalM3 = providerData.reduce((acc, curr)=>acc+curr.m3, 0);
 
@@ -1318,21 +1317,43 @@ export default function App() {
         return { hourlyCounts: [], providerData: [], totalM3: 0, count: 0 };
       }
   };
+  // -------------------------------------------------------------
 
   if (loading) return (
-      <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f172a', color:'white', flexDirection:'column', gap:'20px'}}>
-        <div style={{width:'40px', height:'40px', border:'4px solid rgba(255,255,255,0.3)', borderTop:'4px solid white', borderRadius:'50%', animation:'spin 1s linear infinite'}}></div>
-        <div style={{fontWeight:'bold', letterSpacing:'0.1em'}}>CARGANDO SISTEMA PRO-GOLD...</div>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      <div style={styles.splashScreen}>
+          <div style={styles.splashLogoContainer}>
+              <Icons.Logo />
+          </div>
+          <style>{`@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }`}</style>
+          <div style={{color:'white', marginTop:'20px', fontWeight:'bold', letterSpacing:'0.2em'}}>CARGANDO SISTEMA...</div>
       </div>
   );
+
+  if (licenseStatus === 'expired') {
+      return (
+          <div style={styles.lockedScreen}>
+              <Icons.Lock />
+              <h1 style={{fontSize:'2.5rem', color:'#ef4444', margin:'20px 0'}}>PERIODO DE PRUEBA TERMINADO</h1>
+              <p style={{fontSize:'1.2rem', maxWidth:'600px', marginBottom:'40px'}}>
+                  Los 3 días de demostración gratuita de Control Pro GOLD han finalizado. 
+                  Para continuar operando y recuperar el acceso a tus datos, adquiere una licencia.
+              </p>
+              <div style={{display:'flex', gap:'20px', flexDirection:'column'}}>
+                  <button onClick={() => window.open('https://wa.me/5211234567890', '_blank')} style={{...styles.button, background:'#25D366', fontSize:'1.2rem', color:'white'}}>
+                      <i className="fa-brands fa-whatsapp"></i> CONTACTAR VENTAS
+                  </button>
+                  <p style={{fontSize:'0.8rem', color:'#64748b'}}>ID de Instalación: {appId}</p>
+              </div>
+          </div>
+      );
+  }
 
   if (!currentAuth.isAuthenticated) {
     return (
       <div style={styles.loginScreen}>
         <div style={styles.loginBox}>
-          <div style={{display:'flex', justifyContent:'center', marginBottom:'20px'}}>
-              <Icons.Building />
+          <div style={{display:'flex', justifyContent:'center', marginBottom:'20px', height: '80px'}}>
+              <Icons.Logo />
           </div>
           <h1 style={{color: '#1e293b', margin: '0 0 5px 0', fontSize:'1.8rem', fontWeight:'800'}}>CONTROL OBRA <span style={{color:'#d97706'}}>PRO GOLD</span></h1>
           <p style={{color:'#64748b', margin:'0 0 30px 0', fontSize:'0.9rem'}}>Sistema de Gestión de Obra</p>
@@ -1365,9 +1386,16 @@ export default function App() {
         <div style={styles.syncBanner}>📡 Sincronizando datos con el servidor...</div>
       )}
 
-      {/* HEADER DINÁMICO (CAMBIA SI ES EJIDO) */}
+      {licenseStatus === 'valid' && daysRemaining <= SECURITY_CONFIG.TRIAL_DAYS && (
+          <div style={styles.trialBanner}>
+              <span>⚡ MODO PRUEBA ACTIVO</span>
+              <span style={{opacity:0.8}}>|</span>
+              <span>Quedan {daysRemaining} días</span>
+          </div>
+      )}
+
       <header style={{...styles.header, ...(isEjidoMode ? styles.headerEjido : {})}} className="no-print">
-        <div>
+        <div style={{marginTop: (licenseStatus === 'valid' ? '30px' : '0')}}>
           <h1 style={styles.title}>Control <span style={{color: isEjidoMode ? '#e9d5ff' : '#fbbf24'}}>{isEjidoMode ? 'EJIDO' : 'GOLD'}</span></h1>
           <p style={styles.subtitle}>
              <span style={{...styles.onlineIndicator, backgroundColor: isOnline ? '#4ade80' : '#ef4444'}}></span>
@@ -1543,7 +1571,7 @@ export default function App() {
                         onClick={() => setExpandWeeklyGen(!expandWeeklyGen)} 
                         style={{...styles.accordionBtn, background:'#f0f9ff', border:'1px solid #bae6fd', color:'#0284c7'}}
                     >
-                        <span>📅 Reportes Avanzados</span>
+                        <span>📅 Generador Semanal (Proveedores)</span>
                         <span>{expandWeeklyGen ? '▲' : '▼'}</span>
                     </button>
                     
@@ -1562,7 +1590,7 @@ export default function App() {
                                 </div>
                             ) : (
                                 <div>
-                                    <p style={{fontSize:'0.8rem', color:'#0284c7', marginBottom:'10px', fontWeight:'bold'}}>Selecciona el rango:</p>
+                                    <p style={{fontSize:'0.8rem', color:'#0284c7', marginBottom:'10px', fontWeight:'bold'}}>Selecciona el rango de la semana:</p>
                                     <div style={{display:'flex', gap:'10px', marginBottom:'15px'}}>
                                         <div style={{flex:1}}>
                                             <span style={{fontSize:'0.7rem', fontWeight:'bold', color:'#64748b'}}>INICIO:</span>
@@ -1573,10 +1601,7 @@ export default function App() {
                                             <input type="date" value={weeklyEnd} onChange={e => setWeeklyEnd(e.target.value)} style={{...styles.input, padding:'8px'}} />
                                         </div>
                                     </div>
-                                    <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-                                        <button onClick={handleGenerateWeeklyReport} style={{...styles.button, background:'#0ea5e9'}}>📄 REPORTE SEMANAL (Proveedores)</button>
-                                        <button onClick={handleExportEjidoReport} style={{...styles.button, background:'#7e22ce'}}>🚜 REPORTE ESPECIAL EJIDO (Sin Valor)</button>
-                                    </div>
+                                    <button onClick={handleGenerateWeeklyReport} style={{...styles.button, background:'#0ea5e9'}}>📄 GENERAR REPORTE SEMANAL</button>
                                 </div>
                             )}
                         </div>
@@ -1590,7 +1615,7 @@ export default function App() {
                  <div style={{...styles.card, marginTop:'20px', display:'flex', justifyContent:'space-between', alignItems:'center', background:'linear-gradient(to right, #ecfdf5, #ffffff)', borderColor:'#a7f3d0', padding:'20px'}}>
                      <div>
                          <h3 style={{margin:0, fontSize:'1rem', color:'#065f46'}}>📊 Reporte Diario ({selectedDate})</h3>
-                         <p style={{margin:'4px 0 0 0', fontSize:'0.75rem', color:'#059669'}}>Solo viajes comerciales</p>
+                         <p style={{margin:'4px 0 0 0', fontSize:'0.75rem', color:'#059669'}}>Excel detallado de la jornada actual</p>
                      </div>
                      <button onClick={handleExportDailyExcel} style={{...styles.button, width:'auto', padding:'10px 20px', fontSize:'0.8rem', background:'#10b981', boxShadow:'0 4px 10px rgba(16, 185, 129, 0.3)'}}>DESCARGAR</button>
                  </div>
@@ -1647,6 +1672,17 @@ export default function App() {
                             <td style={{...styles.td, fontWeight:'bold', color:'#1e293b'}}>
                                 {log.placas}
                                 {log.isEjido && <span style={styles.ejidoBadge}>EJIDO</span>}
+                                {/* INDICADOR DE TIEMPO / VUELTA RÁPIDA */}
+                                {!log.isEjido && log.timeDelta !== null && (
+                                    <div style={{
+                                        ...styles.timeTag, 
+                                        ...(log.timeDelta < SECURITY_CONFIG.MIN_CYCLE_TIME_MINUTES ? styles.timeTagSuspicious : styles.timeTagNormal),
+                                        display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop:'4px'
+                                    }}>
+                                        <Icons.Time/> {log.timeDelta} min
+                                        {log.timeDelta < SECURITY_CONFIG.MIN_CYCLE_TIME_MINUTES && " ⚠️"}
+                                    </div>
+                                )}
                             </td>
                             <td style={{...styles.td, color:'#2563eb', fontWeight:'600'}}>{log.noteNumber || '-'}</td>
                             <td style={styles.td}>{log.createdAt && typeof log.createdAt.toLocaleTimeString === 'function' ? log.createdAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</td>
@@ -1714,12 +1750,16 @@ export default function App() {
                    {isEjidoMode ? '🚜 Zona Ejido Seleccionada' : '📍 1. Selecciona Zona'}
                </h3>
                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'15px'}}>
-                 {locations.map(l => (
+                 {locations.map(l => {
+                    // CALCULAR PROGRESO
+                    const progress = getLocationProgress(l.id);
+                    
+                    return (
                     <button 
                         key={l.id} 
                         onClick={()=>setSelectedLocationId(l.id)} 
                         style={{
-                            padding:'20px', 
+                            padding:'15px', 
                             border: selectedLocationId===l.id ? (isEjidoMode ? '2px solid #7e22ce' : '2px solid #2563eb') : '1px solid #e2e8f0', 
                             borderRadius:'16px', 
                             background: selectedLocationId===l.id ? (isEjidoMode ? '#f3e8ff' : '#eff6ff') : 'white',
@@ -1727,12 +1767,31 @@ export default function App() {
                             fontWeight: '700',
                             boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
                             transition: 'all 0.2s',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                         }}
                     >
-                        {l.name}
+                        <span style={{marginBottom:'5px'}}>{l.name}</span>
+                        {/* BARRA DE PROGRESO */}
+                        {progress && progress.goal > 0 && (
+                            <div style={{width:'100%'}}>
+                                <div style={{fontSize:'0.65rem', color:'#64748b', marginBottom:'2px'}}>
+                                    {progress.currentVol} / {progress.goal} m³
+                                </div>
+                                <div style={styles.progressBarContainer}>
+                                    <div style={{
+                                        ...styles.progressBarFill, 
+                                        width: `${progress.pct}%`,
+                                        backgroundColor: progress.pct >= 100 ? '#ef4444' : (progress.pct > 80 ? '#f59e0b' : '#22c55e')
+                                    }}></div>
+                                </div>
+                            </div>
+                        )}
                     </button>
-                 ))}
+                 )})}
                </div>
              </div>
              <button 
