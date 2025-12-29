@@ -467,43 +467,65 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    const checkLicense = async () => {
-        const licenseRef = doc(db, collectionPath, "settings", "license");
-        
-        try {
-            const snap = await getDoc(licenseRef);
-            let startDate;
+    // --- PEGA ESTO EN LUGAR DE LA FUNCIÓN checkLicense ACTUAL ---
+const checkLicense = async () => {
+    const licenseRef = doc(db, collectionPath, "settings", "license");
+    
+    try {
+        const snap = await getDoc(licenseRef);
+        let validUntilDate;
 
-            if (snap.exists()) {
-                const data = snap.data();
-                startDate = data.startDate.toDate();
+        if (snap.exists()) {
+            const data = snap.data();
+            
+            // 1. Buscamos si existe una FECHA DE VENCIMIENTO en la base de datos
+            if (data.validUntil) {
+                validUntilDate = data.validUntil.toDate();
             } else {
-                const now = new Date();
-                await setDoc(licenseRef, {
-                    startDate: serverTimestamp(), 
-                    status: 'trial',
-                    version: '2.0'
-                });
-                startDate = now;
+                // Si no existe fecha de vencimiento, calculamos 3 días de prueba desde el inicio
+                const startDate = data.startDate ? data.startDate.toDate() : new Date();
+                validUntilDate = new Date(startDate);
+                validUntilDate.setDate(validUntilDate.getDate() + 3); // 3 días de gracia por defecto
             }
 
+        } else {
+            // 2. Si es la primera vez que se abre, creamos la licencia de prueba (3 días)
             const now = new Date();
-            const diffTime = Math.abs(now - startDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-            const remaining = SECURITY_CONFIG.TRIAL_DAYS - diffDays;
+            const trialEnd = new Date(now);
+            trialEnd.setDate(trialEnd.getDate() + 3); // +3 días desde hoy
 
-            if (diffDays > SECURITY_CONFIG.TRIAL_DAYS) {
-                setLicenseStatus('expired');
-                setDaysRemaining(0);
-            } else {
-                setLicenseStatus('valid');
-                setDaysRemaining(remaining >= 0 ? remaining : 0);
-            }
-
-        } catch (e) {
-            setLicenseStatus('valid'); 
+            await setDoc(licenseRef, {
+                startDate: serverTimestamp(),
+                validUntil: Timestamp.fromDate(trialEnd), // Guardamos cuándo caduca
+                status: 'trial',
+                version: '2.0'
+            });
+            validUntilDate = trialEnd;
         }
-    };
+
+        // 3. COMPARACIÓN: ¿La fecha de hoy es antes del vencimiento?
+        const now = new Date();
+        const diffTime = validUntilDate - now;
+        // Convertimos milisegundos a días
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (daysLeft > 0) {
+            // SI AÚN HAY TIEMPO
+            setLicenseStatus('valid');
+            setDaysRemaining(daysLeft);
+        } else {
+            // SI YA PASÓ LA FECHA
+            setLicenseStatus('expired');
+            setDaysRemaining(0);
+        }
+
+    } catch (e) {
+        console.error("Error validando licencia:", e);
+        // Si no hay internet, dejamos pasar temporalmente (o puedes bloquear si prefieres)
+        setLicenseStatus('valid');
+        setDaysRemaining(1);
+    }
+};
 
     checkLicense();
   }, [user]);
