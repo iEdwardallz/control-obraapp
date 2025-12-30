@@ -1,12 +1,21 @@
-"icons": [
-    {
-      "src": "/logo-cidelt.jpg",   
-      "sizes": "192x192",
-      "type": "image/jpeg"
-    },
-    {
-      "src": "/logo-cidelt.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg"
-    }
-  ]
+{
+    "name": "CIDELT Control Pro",
+    "short_name": "ControlGold",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1e293b",
+    "theme_color": "#2563eb",
+    "description": "Sistema de Control de Obra y Volumetría",
+    "icons": [
+      {
+        "src": "/logo-cidelt.jpg",
+        "sizes": "192x192",
+        "type": "image/jpeg"
+      },
+      {
+        "src": "/logo-cidelt.jpg",
+        "sizes": "512x512",
+        "type": "image/jpeg"
+      }
+    ]
+  }
